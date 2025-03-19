@@ -5,18 +5,33 @@
     export default {
         data() {
             return {
-                preview: null,
+                previewPanel: true,
+                presetPanel: false,
                 testlist: [],
             }
         },
 
         methods : {
-            textchange(data) {
+            textChange(data) {
                 this.testlist = data;
             },
 
             closePreview() {
                 this.testlist = [];
+            },
+
+            handleSwitchPreset() {
+                if (!this.presetPanel) {
+                    this.previewPanel = false;
+                    this.presetPanel = true;
+                }
+            },
+
+            updatePanel() {
+                if (!this.previewPanel) {
+                    this.presetPanel = false;
+                    this.previewPanel = true;
+                }
             }
         },
 
@@ -34,15 +49,28 @@
     <div id="main">
         <div id="list">
             <UploadFileButton 
-                @file-response="textchange"
+                :previewPanel="previewPanel"
+                @file-response="textChange"
                 @previewclose="closePreview"
+                @updatePanel="updatePanel"
             ></UploadFileButton>
+
+            <span id="showReset">预设显示</span>
+
+            <button id="switchPreset"
+                @click="handleSwitchPreset"
+            
+            >切换预设</button>
         </div>
         <div id="container">
-            <div id="filepreview">
+            <div id="previewPanel" v-show="previewPanel">
                 <div v-for="(item, index) in testlist">
                     <span class="parag" :id="'parag' + index">{{ item }}</span>
                 </div>
+            </div>
+
+            <div id="presetPanel" v-show="presetPanel">
+                
             </div>
         </div>
     </div>
@@ -73,11 +101,34 @@
     background-color: #cccbc8;
 }
 
-#filepreview {
+#previewPanel {
     margin: 16px;
 	display: flex;
     flex: 1 1 auto;
 	flex-direction: column;
     background-color: #fffefb;
+}
+
+#showReset {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    margin: 8px;
+    height: 3em;
+    border-radius: 12px;
+    background-color: #d4eaf7;
+
+}
+
+#switchPreset {
+    margin: 8px;
+    height: 3em;
+    border-radius: 12px;
+    background-color: #d4eaf7;
+}
+
+#switchPreset:hover {
+    background-color: #b3d9f0;
 }
 </style>

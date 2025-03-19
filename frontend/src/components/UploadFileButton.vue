@@ -1,32 +1,3 @@
-<template>
-    <div id="upload-container">
-        
-        <input 
-            type="file" 
-            style="display:none" 
-            ref="fileinput" 
-            @change="handleFile"
-        />
-        
-        <button id="upload-button"
-            v-if="!isUpload"
-            @click="triggerUpload"
-        >
-            上传文件
-        </button>
-
-        <div v-else id="file-info">
-            <span> {{ fileName }}</span>
-            <button
-                @click="closeFile"
-            >
-                关闭    
-        </button>
-
-        </div>
-    </div>
-</template>
-
 <script>
     import axios from "axios";
 
@@ -48,6 +19,9 @@
             },
 
             handleFile(event) {
+                if (!this.previewPanel) {
+                    this.$emit("updatePanel");
+                }
                 this.file = event.target.files[0]; 
                 this.uploadFile(this.file);
             },
@@ -71,7 +45,7 @@
             /**
              * close the file
              * isUpload controls the display of the file info
-             * the file imformation will be cleared
+             * the file information will be cleared
              */
             closeFile() {
                 this.isUpload = false;
@@ -80,9 +54,48 @@
                 this.$refs.fileinput.value = '';
                 this.$emit("previewclose");
             }
+        },
+
+        props: {
+            previewPanel: {
+                type: Boolean,
+                required: true
+            }
         }
     }
 </script>
+
+<template>
+    <div id="upload-container">
+        
+        <input 
+            type="file" 
+            style="display:none" 
+            ref="fileinput" 
+            @change="handleFile"
+        />
+        
+        <button id="upload-button"
+            v-if="!isUpload"
+            @click="triggerUpload"
+        >
+            上传文件
+        </button>
+
+        <div v-else id="file-info">
+            <button id="filename"
+                @click="$emit('updatePanel')"
+            > {{ fileName }}</button>
+            <button
+                @click="closeFile"
+            >
+                关闭    
+        </button>
+
+        </div>
+    </div>
+</template>
+
 
 <style>
 #upload-container {
@@ -113,7 +126,7 @@
     background-color: #d4eaf7;
 }
 
-#file-info span {
+/* #file-info span {
     max-width: 9em;
     margin-right: 1em;
     padding: 8px;
@@ -122,11 +135,27 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+} */
+
+#file-info button,#filename {
+    max-width: 9em;
+    height: 2.4em;
+    border-radius: 8px;
+    margin-right: 1em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background-color: #f0f0f0;
 }
 
 #file-info button {
     height: 2.4em;
     border-radius: 8px;
     background-color: #f0f0f0;
+}
+
+#file-info button:hover {
+    background-color: #e0e0e0;
+    cursor: pointer;
 }
 </style>
