@@ -6,16 +6,16 @@ import os
 import magic
 
 app = Flask(__name__)
-UPLOAD_FOLDER = 'G:/TTS/api1/cache/Input'
-ALLOWED_EXTENSIONS = {'docx', 'pptx', 'txt'}
-ALLOWED_MIME_TYPES = {    # 这些是mime类型
-    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'txt': 'text/plain'
-}
+# UPLOAD_FOLDER = 'G:/TTS/api1/cache/Input'
+# ALLOWED_EXTENSIONS = {'docx', 'pptx', 'txt'}
+# ALLOWED_MIME_TYPES = {    # 这些是mime类型
+#     'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+#     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+#     'txt': 'text/plain'
+# }
 
-# 确保上传目录存在
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# # 确保上传目录存在
+# os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # 校验文件扩展名是否合法
 def allowed_file(filename):
@@ -23,8 +23,14 @@ def allowed_file(filename):
         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-@app.route('/upload', methods=['POST'])        # JS的AJAX请求，fetch("/upload", {...})
+@app.route('/api/upload', methods=['POST'])        # JS的AJAX请求，fetch("/upload", {...})
 def upload_file():
+    return jsonify([
+    "第一段的文字",
+    "第二段的文字",
+    "第三段的文字",
+    "...剩下的段落依次以数组格式存储"
+]), 200;
     # 1. 检查请求中是否包含文件
     if 'file' not in request.files:
         return jsonify({"error": "未选择文件"}), 400
