@@ -1,4 +1,19 @@
 # 忽略个人配置文件
 .idea/
 testfile/
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
 backend/FTB/__pycache__/
+=======
+=======
+>>>>>>> Stashed changes
+
+# Python byte-compiled files
+__pycache__/
+*.py[cod]
+<<<<<<< Updated upstream
+*$py.class
+>>>>>>> Stashed changes
+=======
+*$py.class
+>>>>>>> Stashed changes
