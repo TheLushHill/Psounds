@@ -14,10 +14,15 @@ def get_docxtext(file):
         doc = Document(file_stream)
 
         # 提取并过滤段落
+        # paragraphs = [
+        #     para.text.strip()           # .text提取文本, .strip去除空白符号, replace('\n', '').replace('\r', '')加在后面去除换行符
+        #     for para in enumerate(doc.paragraphs, 1)
+        #     if para.text.strip()        # 过滤空段落
+        # ]
         paragraphs = [
-            para.text.strip()           # .text提取文本, .strip去除空白符号, replace('\n', '').replace('\r', '')加在后面去除换行符
-            for para in enumerate(doc.paragraphs, 1)
-            if para.text.strip()        # 过滤空段落
+            para.text.strip()
+            for para in doc.paragraphs    # 删除 enumerate，直接遍历 paragraphs
+            if para.text.strip()          # 保留非空段落
         ]
 
         # 生成标准JSON格式

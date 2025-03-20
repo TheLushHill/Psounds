@@ -1,134 +1,142 @@
 <script>
-
+    import PreviewPanel from "./PreviewPanel.vue"
+    import ModelPanel from "./ModelPanel.vue"
     import UploadFileButton from "./UploadFileButton.vue"
+    import modelConfig from "../config/model.json";
 
     export default {
         data() {
             return {
-                previewPanel: true,
-                presetPanel: false,
-                testlist: [],
+                state: {
+                    previewPanel: true,
+                    modelPanel: false,
+                },
+                textList: [],  
+                modelList: modelConfig,
+                selectedModel: 0
             }
         },
 
         methods : {
             textChange(data) {
-                this.testlist = data;
+                this.textList = data;  
             },
 
             closePreview() {
-                this.testlist = [];
+                this.textList = [];    
             },
 
             handleSwitchPreset() {
-                if (!this.presetPanel) {
-                    this.previewPanel = false;
-                    this.presetPanel = true;
+                if (!this.state.modelPanel) {
+                    this.state.previewPanel = false;
+                    this.state.modelPanel = true;
                 }
             },
 
             updatePanel() {
-                if (!this.previewPanel) {
-                    this.presetPanel = false;
-                    this.previewPanel = true;
+                if (!this.state.previewPanel) {
+                    this.state.modelPanel = false;
+                    this.state.previewPanel = true;
                 }
-            }
-        },
+            },
 
-        computed : {
- 
+            // 选择模型按钮后更新模型
+            updateModel(index) {
+                this.selectedModel = index;
+            }
         },
 
         components: {
             UploadFileButton,
+            PreviewPanel,
+            ModelPanel
         }
     }
 </script>
 
 <template>
-    <div id="main">
-        <div id="list">
+    <div class="main">
+        <div class="side-list">
             <UploadFileButton 
-                :previewPanel="previewPanel"
+                :isVisible="state.previewPanel"
                 @file-response="textChange"
-                @previewclose="closePreview"
-                @updatePanel="updatePanel"
+                @preview-close="closePreview"
+                @update-panel="updatePanel"
             ></UploadFileButton>
 
-            <span id="showReset">预设显示</span>
+            <div class="show-preset">
+                <span>当前模型：</span>
+                <img :src="modelList[selectedModel].iconUrl" />
+                <span>{{ modelList[selectedModel].name }}</span>
+            </div>
 
-            <button id="switchPreset"
+            <button class="switch-preset"
                 @click="handleSwitchPreset"
-            
             >切换预设</button>
         </div>
-        <div id="container">
-            <div id="previewPanel" v-show="previewPanel">
-                <div v-for="(item, index) in testlist">
-                    <span class="parag" :id="'parag' + index">{{ item }}</span>
-                </div>
-            </div>
+        <div class="content-container">
+            <PreviewPanel
+                :isVisible="state.previewPanel"
+                :text-list="textList" 
+            ></PreviewPanel>
 
-            <div id="presetPanel" v-show="presetPanel">
-                
-            </div>
+            <ModelPanel 
+                :isVisible="state.modelPanel"
+                :list="modelList"
+                :model="selectedModel"
+                @model-select="updateModel"
+            ></ModelPanel>
         </div>
     </div>
 </template>
 
 <style>
-#main {
+.main {
     height: 86%;
     margin: 0px 16px 16px 16px;
-
     display: flex;
 }
 
-#list {
+.side-list {
     width: 16.7%;
     margin-right: 16px;
-
     display: flex;
     flex-direction: column;
-
     background-color: #cccbc8;
 }
 
-#container {
-    flex:1 1 auto;
-    display: flex;
-
-    background-color: #cccbc8;
-}
-
-#previewPanel {
-    margin: 16px;
-	display: flex;
+.content-container {
     flex: 1 1 auto;
-	flex-direction: column;
-    background-color: #fffefb;
+    display: flex;
+    background-color: #cccbc8;
 }
 
-#showReset {
+.show-preset {
     display: flex;
     justify-content: center;
+    gap: 1em;
     align-items: center;
-
-    margin: 8px;
-    height: 3em;
-    border-radius: 12px;
-    background-color: #d4eaf7;
-
-}
-
-#switchPreset {
     margin: 8px;
     height: 3em;
     border-radius: 12px;
     background-color: #d4eaf7;
 }
 
-#switchPreset:hover {
+.show-preset img {
+    width: 2.5em;
+    height: 2.5em;
+    border-radius: 8px;
+    object-fit: cover;
+}
+
+.switch-preset {
+    margin: 8px;
+    height: 3em;
+    border-radius: 12px;
+    background-color: #d4eaf7;
+}
+
+.switch-preset:hover {
     background-color: #b3d9f0;
 }
 </style>
