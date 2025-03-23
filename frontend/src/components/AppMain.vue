@@ -3,6 +3,9 @@
     import ModelPanel from "./ModelPanel.vue"
     import UploadFileButton from "./UploadFileButton.vue"
     import modelConfig from "../config/model.json";
+    import FileList from "./FileList.vue";
+
+    import { moveToHead } from "../utils/utils.js"
 
     export default {
         data() {
@@ -11,45 +14,90 @@
                     previewPanel: true,
                     modelPanel: false,
                 },
-                textList: [],  
+
+                fileList: [],
+
                 modelList: modelConfig,
                 selectedModel: 0
+                // textList: [],  
             }
         },
 
         methods : {
-            textChange(data) {
-                this.textList = data;  
+            handleFileUploaded(file) {
+                let newFile = {
+                    ...file,
+                }
+
+                if (this.fileList.length >= 10) {
+                    this.fileList.pop();
+                    this.fileList.unshift(newFile);
+                }
+                else {
+                    this.fileList.unshift(newFile);
+                }
+
+                if (!this.state.previewPanel) {
+                        this.state.previewPanel = true;
+                }
             },
 
-            closePreview() {
-                this.textList = [];    
+            // 处理文件选择，将选中的文件放到fileLIs中的第一个位置
+            handleFileSelect(index) {
+                if (index === 0) {
+                    this.state.previewPanel = true;
+                }
+                else {
+                    moveToHead(this.fileList, index);
+                    this.state.previewPanel = true;
+                }
             },
-
+            
             handleSwitchPreset() {
                 if (!this.state.modelPanel) {
                     this.state.previewPanel = false;
                     this.state.modelPanel = true;
                 }
             },
-
+            
             updatePanel() {
                 if (!this.state.previewPanel) {
                     this.state.modelPanel = false;
                     this.state.previewPanel = true;
                 }
             },
-
-            // 选择模型按钮后更新模型
+            
             updateModel(index) {
                 this.selectedModel = index;
+            }
+            
+            // closePreview() {
+            //     this.textList = [];    
+            // },
+        },
+
+        computed: {
+            getFile() {
+                if (this.fileList.length > 0) {
+                    return this.fileList[0];
+                }
+                else {
+                    return {
+                    "name": "default",
+                    "type": "docx",
+                    "size": 0,
+                    "url": "",
+                    "content" : null,
+                    };
+                }
             }
         },
 
         components: {
             UploadFileButton,
             PreviewPanel,
-            ModelPanel
+            ModelPanel,
+            FileList,
         }
     }
 </script>
@@ -58,28 +106,34 @@
     <div class="main">
         <div class="side-list">
             <UploadFileButton 
-                :isVisible="state.previewPanel"
-                @file-response="textChange"
-                @preview-close="closePreview"
-                @update-panel="updatePanel"
+                @get-file="handleFileUploaded"
             ></UploadFileButton>
+                <!-- :isVisible="state.previewPanel"
+                @preview-close="closePreview"
+                @update-panel="updatePanel" -->
 
-            <div class="show-preset">
+            <FileList
+                :fileList="fileList"
+                @file-select="handleFileSelect"
+            ></FileList>
+
+            <!-- <div class="show-preset">
                 <span>当前模型：</span>
                 <img :src="modelList[selectedModel].iconUrl" />
                 <span>{{ modelList[selectedModel].name }}</span>
-            </div>
+            </div> -->
 
-            <button class="switch-preset"
+            <!-- <button class="switch-preset"
                 @click="handleSwitchPreset"
-            >切换预设</button>
+            >切换预设</button> -->
         </div>
         <div class="content-container">
             <PreviewPanel
                 :isVisible="state.previewPanel"
-                :text-list="textList" 
+                :file="getFile"
             ></PreviewPanel>
-
+                <!-- :text-list="textList"  -->
+                
             <ModelPanel 
                 :isVisible="state.modelPanel"
                 :list="modelList"

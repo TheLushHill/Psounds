@@ -19,7 +19,7 @@
 
                 if (clickedElement.tagName.toLowerCase() === "button") {
                     let index = clickedElement.getAttribute("data-index");
-                    this.$emit("model-select", index);
+                    this.$emit("model-select", Number(index));
                 }
 
                 if (clickedElement.tagName.toLowerCase() === "img") {
