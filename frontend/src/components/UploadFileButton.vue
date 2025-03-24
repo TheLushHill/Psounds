@@ -41,7 +41,6 @@
                     const response = await axios.post("/api/upload", formData);
                     this.file.content = response.data;
                     console.log("上传文件成功:");
-                    // this.isUpload = true;
 
                     // 传递文件给父组件,父组件监听get-file事件
                     this.$emit("get-file", this.file);
@@ -55,14 +54,6 @@
                     alert('文件上传失败: ' + (error.response?.data?.error || error.message));
                 }
             },
-
-            // closeFile() {
-            //     this.isUpload = false;
-            //     this.file = null;
-            //     this.fileName = '';
-            //     this.$refs.fileinput.value = '';
-            //     this.$emit("preview-close");
-            // }
         },
 
         props: {
@@ -94,14 +85,15 @@
 
 .upload-button {
     flex: 1 1 auto;
-    margin: 8px;
     height: 3em;
     border-radius: 12px;
-    background-color: #d4eaf7;
+    background-color: #DCDAF5;
+    border: none;
+    margin: 8px 8px 0 8px;
 }
 
 .upload-button:hover {
-    background-color: #b3d9f0;
+    background-color: #D1CEE9;
 }
 
 </style>

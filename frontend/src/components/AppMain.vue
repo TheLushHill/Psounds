@@ -1,6 +1,7 @@
 <script>
     import PreviewPanel from "./PreviewPanel.vue"
-    import ModelPanel from "./ModelPanel.vue"
+    import TrainPanel from "./TrainPanel.vue"
+    import TrainPanelButton from "./TrainPanelButton.vue"
     import UploadFileButton from "./UploadFileButton.vue"
     import modelConfig from "../config/model.json";
     import FileList from "./FileList.vue";
@@ -12,14 +13,12 @@
             return {
                 state: {
                     previewPanel: true,
-                    modelPanel: false,
+                    trainPanel: false,
                 },
 
                 fileList: [],
 
                 modelList: modelConfig,
-                selectedModel: 0
-                // textList: [],  
             }
         },
 
@@ -52,28 +51,6 @@
                     this.state.previewPanel = true;
                 }
             },
-            
-            handleSwitchPreset() {
-                if (!this.state.modelPanel) {
-                    this.state.previewPanel = false;
-                    this.state.modelPanel = true;
-                }
-            },
-            
-            updatePanel() {
-                if (!this.state.previewPanel) {
-                    this.state.modelPanel = false;
-                    this.state.previewPanel = true;
-                }
-            },
-            
-            updateModel(index) {
-                this.selectedModel = index;
-            }
-            
-            // closePreview() {
-            //     this.textList = [];    
-            // },
         },
 
         computed: {
@@ -96,7 +73,8 @@
         components: {
             UploadFileButton,
             PreviewPanel,
-            ModelPanel,
+            TrainPanel,
+            TrainPanelButton,
             FileList,
         }
     }
@@ -108,46 +86,27 @@
             <UploadFileButton 
                 @get-file="handleFileUploaded"
             ></UploadFileButton>
-                <!-- :isVisible="state.previewPanel"
-                @preview-close="closePreview"
-                @update-panel="updatePanel" -->
-
+    
+            <TrainPanelButton></TrainPanelButton>
+            
             <FileList
                 :fileList="fileList"
                 @file-select="handleFileSelect"
             ></FileList>
-
-            <!-- <div class="show-preset">
-                <span>当前模型：</span>
-                <img :src="modelList[selectedModel].iconUrl" />
-                <span>{{ modelList[selectedModel].name }}</span>
-            </div> -->
-
-            <!-- <button class="switch-preset"
-                @click="handleSwitchPreset"
-            >切换预设</button> -->
         </div>
         <div class="content-container">
             <PreviewPanel
                 :isVisible="state.previewPanel"
                 :file="getFile"
             ></PreviewPanel>
-                <!-- :text-list="textList"  -->
-                
-            <ModelPanel 
-                :isVisible="state.modelPanel"
-                :list="modelList"
-                :model="selectedModel"
-                @model-select="updateModel"
-            ></ModelPanel>
         </div>
     </div>
 </template>
 
 <style>
 .main {
-    height: 86%;
-    margin: 0px 16px 16px 16px;
+    height: 100%;
+    width: 100%;
     display: flex;
 }
 
@@ -156,41 +115,15 @@
     margin-right: 16px;
     display: flex;
     flex-direction: column;
-    background-color: #cccbc8;
+    background-color: #E5DEE2;
 }
 
 .content-container {
+    width: 100%;
+    height: 100%; 
     flex: 1 1 auto;
     display: flex;
-    background-color: #cccbc8;
+    margin-right: 16px;
 }
 
-.show-preset {
-    display: flex;
-    justify-content: center;
-    gap: 1em;
-    align-items: center;
-    margin: 8px;
-    height: 3em;
-    border-radius: 12px;
-    background-color: #d4eaf7;
-}
-
-.show-preset img {
-    width: 2.5em;
-    height: 2.5em;
-    border-radius: 8px;
-    object-fit: cover;
-}
-
-.switch-preset {
-    margin: 8px;
-    height: 3em;
-    border-radius: 12px;
-    background-color: #d4eaf7;
-}
-
-.switch-preset:hover {
-    background-color: #b3d9f0;
-}
 </style>

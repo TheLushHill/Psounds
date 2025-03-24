@@ -2,10 +2,13 @@ body {
     height: 100vh;
     margin: 0;
     padding: 0;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 #app {
     height: 100vh;
     display: flex;
     flex-direction: column;
+    background-color: #F2ECEE;
 }

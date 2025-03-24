@@ -1,6 +1,6 @@
 <script>
     
-    import ModelButton from "./ModelButton.vue";
+    import ModelButton from "./TrainPanelButton.vue";
 
     export default {
         data() {

@@ -33,8 +33,11 @@
 <style>
 .file-list {
     display: flex;
+    flex: 1 1 auto;
     flex-direction: column;
     width: 100%;
+    padding-top: 8px;
+    
 }
 
 .file-list button {
@@ -46,6 +49,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    border: none;
 }
 
 .file-list button:hover {

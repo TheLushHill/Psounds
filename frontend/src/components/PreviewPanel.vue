@@ -56,18 +56,15 @@
             </div>
 
         </div>
-
-        <div class="convert">
-        </div>
     </div>
 </template>
 
 <style>
 .preview-panel {
-    margin: 16px;
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
+    height: 100%;
 }
 
 .preview-panel::-webkit-scrollbar {
@@ -97,15 +94,18 @@
 .preview-pptx {
     display: flex;
     flex-direction: column;
-
+    max-height: 75%;
     overflow-y: scroll;
-
+    background-color: #fffefb;
 }
 
-.convert {
-    max-height: 25%;
-    height: 25%;
-    margin-top: 8px;
-    background-color: #fffefb;
+.preview-pptx .page {
+    margin-top: 1em;
+    margin-left: 2em;
+}
+
+.page .content {
+    display: flex;
+    flex-direction: column;
 }
 </style>

@@ -8,7 +8,5 @@
 .head {
     height: 14%;
     margin: 16px;
-
-    background-color: #cccbc8;
 }
 </style>
