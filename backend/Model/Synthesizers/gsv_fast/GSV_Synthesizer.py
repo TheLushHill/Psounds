@@ -49,7 +49,7 @@ class GSV_Synthesizer(Base_TTS_Synthesizer):
         super().__init__()
 
         if config_path is None:
-            config_path = "gsv_config.json"
+            config_path = "Model/gsv_config.json"
         config_dict = load_config(config_path)
         config_dict.update(kwargs)
         for key, value in config_dict.items():
@@ -69,9 +69,9 @@ class GSV_Synthesizer(Base_TTS_Synthesizer):
             self.default_character = next(iter(self.get_characters()), None)
 
         self.load_character(self.default_character)
-        ui_config_path = os.path.join("Synthesizers/gsv_fast/configs", "ui_config.json")
-        with open(ui_config_path, 'r', encoding='utf-8') as f:
-            self.ui_config = json.load(f)
+        # ui_config_path = os.path.join("Synthesizers/gsv_fast/configs", "ui_config.json")
+        # with open(ui_config_path, 'r', encoding='utf-8') as f:
+        #     self.ui_config = json.load(f)
 
     # from https://github.com/RVC-Boss/GPT-SoVITS/pull/448
     def get_streaming_tts_wav(self, params):
@@ -99,8 +99,8 @@ class GSV_Synthesizer(Base_TTS_Synthesizer):
     def get_characters(self) -> dict:
         characters_and_emotions = {}
         # self.models_path = os.environ.get('models_path', 'trained')
-        self.models_path = self.ui_config.get('models_path', 'trained')
-        print(f"get_characters trained模型地址: {os.environ.get('models_path', 'trained')}")
+        self.models_path = self.ui_config.get('models_path', 'Model/trained')
+        print(f"get_characters trained模型地址: {os.environ.get('models_path', 'Model/trained')}")
 
         # 遍历模型路径下的所有文件夹
         for character_subdir in os.listdir(self.models_path):

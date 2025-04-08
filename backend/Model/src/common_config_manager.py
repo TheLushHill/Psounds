@@ -1,38 +1,38 @@
 import os, sys, json
-from typing import List, Any, Optional, Dict, Literal
+from typing import List, Any, Optional ,Dict, Literal   
 from pydantic import BaseModel, Field, model_validator
 
 __version__ = "2.6.3"
 
-from Synthesizers.base import load_config
+from Model.Synthesizers.base import load_config
 
 
 class Api_Config(BaseModel):   
-    config_path: str = None
+    config_path:str = None
     tts_port: int = 5000
     tts_host: str = "0.0.0.0" 
     synthesizer: str = "gsv_fast"
 
-    def __init__(self, config_path=None):
+
+    def __init__(self, config_path = None):
         super().__init__()
         
-        # 使用相对路径
-        self.config_path = config_path or os.path.join(os.path.dirname(__file__), "../common_config.json")
+        self.config_path = config_path
         assert os.path.exists(self.config_path), f"配置文件不存在: {self.config_path}"
         if os.path.exists(self.config_path):
             all_config = load_config(self.config_path)
-            config: dict = all_config.get("common", {})
+            config:dict = all_config.get("common", {})
             for key, value in config.items():
                 setattr(self, key, value)
         
 class App_Config(BaseModel):
 
-    config_path: str = None
+    config_path:str = None
     locale: str = "auto"
     is_share: bool = False
     inbrowser: bool = True
     server_name: str = "0.0.0.0"
-    server_port: int = -1  # -1 means auto select
+    server_port: int = -1 # -1 means auto select
     also_enable_api: bool = True
     synthesizer: str = "gsv_fast"
     max_text_length: int = -1
@@ -44,14 +44,14 @@ class App_Config(BaseModel):
         return self
 
     @staticmethod
-    def check_port(port: int, server_name: str):
+    def check_port(port:int, server_name:str):
         url = f"http://{server_name}:{port}"
      
-    def __init__(self, config_path=None):
+    
+    def __init__(self, config_path = None):
         super().__init__()
         
-        # 使用相对路径
-        self.config_path = config_path or os.path.join(os.path.dirname(__file__), "../common_config.json")
+        self.config_path = config_path
         assert os.path.exists(self.config_path), f"配置文件不存在: {self.config_path}"
         if os.path.exists(self.config_path):
             all_config = load_config(self.config_path)
@@ -59,6 +59,7 @@ class App_Config(BaseModel):
             for key, value in config.items():
                 setattr(self, key, value)
 
-# 使用相对路径初始化配置
-app_config = App_Config()
-api_config = Api_Config()
+app_config = App_Config("common_config.json")
+api_config = Api_Config("common_config.json")
+
+

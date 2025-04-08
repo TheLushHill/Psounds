@@ -11,7 +11,7 @@ from Synthesizers.base import Base_TTS_Task, ParamItem, init_params_config
 
 def get_params_config():
     try:
-        with open(os.path.join("Synthesizers/gsv_fast/configs", "params_config.json"), "r", encoding="utf-8") as f:
+        with open(os.path.join("Model/Synthesizers/gsv_fast/configs", "params_config.json"), "r", encoding="utf-8") as f:
             return init_params_config(json.load(f))
     except:
         raise FileNotFoundError("params_config.json not found or invalid.")

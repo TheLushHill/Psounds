@@ -105,11 +105,11 @@ def get_wave_header_chunk(sample_rate: int, channels: int = 1, sample_width: int
     Returns:
         bytes: The wave header as bytes.
     """
-    wav_buf = io.BytesIO()
-    with wave.open(wav_buf, "wb") as vfout:
-        vfout.setnchannels(channels)
-        vfout.setsampwidth(sample_width)
-        vfout.setframerate(sample_rate)
+    # wav_buf = io.BytesIO()
+    # with wave.open(wav_buf, "wb") as vfout:
+    #     vfout.setnchannels(channels)
+    #     vfout.setsampwidth(sample_width)
+    #     vfout.setframerate(sample_rate)
 
-    wav_buf.seek(0)
-    return wav_buf.read()
+    # wav_buf.seek(0)
+    # return wav_buf.read()

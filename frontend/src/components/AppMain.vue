@@ -19,16 +19,19 @@
                     convertPanel: false,
                     trainPanel: false,
                 },
-
-                audioContext: null,
-                audioParams: null, // { sampleRate, channels, bitDepth }
-                pcmBuffer: new Uint8Array(), // 累积的PCM数据
+                
                 isStreaming: false,
+                abortController: null,
+                test: Number,
 
                 fileList: [],
 
                 modelList: modelConfig,
             }
+        },
+        mounted() {
+            this.audioCtx = new AudioContext();
+            this.playTime =this.audioCtx.currentTime;
         },
 
         methods : {
@@ -95,121 +98,112 @@
 
             async handleTestClick() { 
                 try {
-                    let response = await fetch("/api/stream", {
+                    if (this.isStreaming) return
+                    this.isStreaming = true
+                    this.audioCtx = new AudioContext()
+                    this.abortController = new AbortController()
+                    // 重置播放指针
+                    this.playTime = this.audioCtx.currentTime
+
+                    let response = await fetch("/api/tts_stream", {
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
-                            "text": "在我周围也有相同的魔法，只不过温度更低，效果也不那么激烈：一大堆斜槽和吞吐口挤在四周的隔离壁上，其中几个开口之大，足可塞进我的拳头，有一两个甚至能把我整个人吞下去。忒修斯的制造车间可以造出任何东西，无论是刀叉还是驾驶室。只要有足够的物质储备，它甚至能一点一点地造出另一艘忒修斯，只不过时间当然会拖得很长。有人怀疑它甚至能造出另一批船员，不过我们得到的保证是这是不可能的。尽管这些机械代表了最前沿的技术，但它们的手指仍然不够精密，无法在人类头骨的狭小空间内重建好几兆的神经突触。至少现在还不行。这话我信。因为如果真有更便宜的替代方案，他们绝不会让我们这样组装完好地上路。我面朝前方，把后脑勺枕在那扇密闭的舱门上，这样一来我几乎能看到忒修斯的船头。我的视线一路畅通无阻，直看到三十米开外，尽头是仿佛飞镖盘红心的小小黑点。我就好像盯着一个环环相套的巨大靶子，包裹在隔离壁里的舱门是白色和灰色的同心圆，一个套一个，形成一条完美的直线。舱门全都开着，毫不理会过去几代人严防死守的安全规程。其实也可以把它们关起来，如果我们觉得关门能让自己更安心的话，但这样做的作用也仅止于此。实践早已证明，关闭舱门丝毫不会增加我们的生存几率。如果遇上麻烦，这些舱门会在瞬间关闭，而人类的感官还要多花好几毫秒才能明白警报的含义。这些门甚至并非电脑控制。忒修斯的身体里包含反射神经。"
-                        })
-                    });
-
-                    let reader = response.body.getReader();
-                    let audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    let isFirstChunk = true;
-                    let sampleRate = 32000; // 默认采样率
-                    
-                    let pump = async () => {
-                        let { done, value } = await reader.read();
-                        if (done) return;
-
-                        if (isFirstChunk) {
-                            // 解析 WAV 头
-                            let header = new DataView(value.buffer, 0, 44);
-                            sampleRate = header.getUint32(24, true);
-                            isFirstChunk = false;
-                        }
-
-                        // 解码 PCM 数据
-                        let audioBuffer = await audioContext.decodeAudioData(value.buffer);
-                        let source = audioContext.createBufferSource();
-                        source.buffer = audioBuffer;
-                        source.connect(audioContext.destination);
-                        source.start(0);
-
-                        pump();
-                    };
-
-                    pump();
+                            "text": "你说的对，但是《原神》是由米哈游自主研发的一款全新开放世界冒险游戏。游戏发生在一个被称作「提瓦特」的幻想世界，在这里，被神选中的人将被授予「神之眼」，导引元素之力。你将扮演一位名为「旅行者」的神秘角色，在自由的旅行中邂逅性格各异、能力独特的同伴们，和他们一起击败强敌，找回失散的亲人——同时，逐步发掘「原神」的真相。",
+                        }),
+                        responseType: "audio/wav",
                         
-                    // console.log(response.data);
-                    // let audio = new Audio();
-                    // audio.src = URL.createObjectURL(new Blob([response.data], { type: "audio/wav" }));
-                    // audio.play();
-                    // this.$refs.audio.src = audioUrl;
-                    // this.$refs.audio.load();
-                    // this.$refs.audio.play();
-                } catch (error) {
-                    console.error('请求错误:', error);    
-                    alert('流式音频请求失败: ' + error.message);
-                }
-            },
-
-            async startStream() {
-                if (this.isStreaming) return;
-                this.isStreaming = true;
-                
-                try {
-                    // 初始化音频环境 
-                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    // 请求流式音频接口 
-                    const response = await fetch('/api/stream-audio');
-                    const reader = response.body.getReader();
+                    });
+                    let reader = response.body.getReader();
                     let isFirstChunk = true;
+                    let header = null;
 
                     while (this.isStreaming) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
+                        const { done, value } = await reader.read()
+                        if (done) break
 
-                    if (isFirstChunk) {
-                        // 处理首帧（含WAV头） 
-                        this.parseWavHeader(value.slice(0, 44));
-                        this.pcmBuffer = new Uint8Array(value.slice(44));
-                        isFirstChunk = false;
-                    } else {
-                        // 追加后续PCM数据 
-                        this.pcmBuffer = this.mergeBuffers(this.pcmBuffer, new Uint8Array(value));
-                    }
-
-                    // 动态生成WAV并播放 
-                    await this.playDynamicWav();
+                        if (isFirstChunk) {
+                            // 解析 WAV 头，取出通道数、采样率、位深
+                            header = this.parseWavHeader(value.buffer)
+                            isFirstChunk = false
+                        } else {
+                            this.scheduleAudio(value, header)
+                        }
                     }
                 } catch (error) {
-                    console.error('流式音频错误:', error);
+                    console.error("Error:", error);
+                    alert("Error: " + error.message);
                 } finally {
                     this.isStreaming = false;
                 }
             },
-            parseWavHeader(headerData) {
-                const view = new DataView(headerData);
-                this.audioParams = {
-                    sampleRate: view.getUint32(24, true),
-                    channels: view.getUint16(22, true),
-                    bitDepth: view.getUint16(34, true)
-                };
+            parseWavHeader(buffer) {
+                const dv = new DataView(buffer);
+                const numChannels   = dv.getUint16(22, true);
+                const sampleRate    = dv.getUint32(24, true);
+                const bitsPerSample = dv.getUint16(34, true);
+                return { numChannels, sampleRate, bitsPerSample };
             },
-            mergeBuffers(existing, newChunk) {
-                const merged = new Uint8Array(existing.length + newChunk.length);
-                merged.set(existing);
-                merged.set(newChunk, existing.length);
-                return merged;
-            },
-            async playDynamicWav() {
-                const wavData = this.generateWavWithHeader();
-                try {
-                    const audioBuffer = await this.audioContext.decodeAudioData(wavData.buffer);
-                    const source = this.audioContext.createBufferSource();
-                    source.buffer = audioBuffer;
-                    source.connect(this.audioContext.destination);
-                    source.start(0);
-                    
-                    // 清空已播放数据（保留未播放部分需更复杂逻辑）
-                    this.pcmBuffer = new Uint8Array(0); 
-                } catch (error) {
-                    console.error('音频解码失败:', error);
+            pcmToFloat32(pcmBuffer, bitsPerSample) {
+                const dv = new DataView(pcmBuffer.buffer, pcmBuffer.byteOffset, pcmBuffer.byteLength)
+                const count = pcmBuffer.byteLength / (bitsPerSample / 8)
+                const float32 = new Float32Array(count)
+                for (let i = 0; i < count; i++) {
+                    let sample = 0
+                    if (bitsPerSample === 16) {
+                    sample = dv.getInt16(i * 2, true) / 0x8000
+                    } else if (bitsPerSample === 8) {
+                    sample = (dv.getUint8(i) - 128) / 128
+                    }
+                    float32[i] = sample
                 }
+                return float32
+            },
+
+            scheduleAudio(pcmChunk, header) {
+                const { numChannels, sampleRate, bitsPerSample } = header;
+
+                const bytesPerSample = bitsPerSample / 8;
+                const frameBytes     = bytesPerSample * numChannels;
+
+                // 如果 chunk 太短，直接跳过
+                if (pcmChunk.byteLength < frameBytes) return;
+
+                // 丢弃尾部不完整的字节
+                const remainder = pcmChunk.byteLength % frameBytes;
+                if (remainder !== 0) {
+                    // 丢掉最后 remainder 字节
+                    pcmChunk = pcmChunk.slice(0, pcmChunk.byteLength - remainder);
+                }
+
+                // PCM → Float32Array
+                const float32 = this.pcmToFloat32(pcmChunk, bitsPerSample);
+                const frameCount = float32.length / numChannels;
+
+                // 创建 AudioBuffer
+                const buffer = this.audioCtx.createBuffer(
+                    numChannels,
+                    frameCount,
+                    sampleRate
+                );
+                for (let ch = 0; ch < numChannels; ch++) {
+                    const channelData = buffer.getChannelData(ch);
+                    for (let i = 0; i < frameCount; i++) {
+                    channelData[i] = float32[i * numChannels + ch];
+                    }
+                }
+
+                // 建立播放节点并排队播放
+                const src = this.audioCtx.createBufferSource();
+                src.buffer = buffer;
+                src.connect(this.audioCtx.destination);
+                src.start(this.playTime);
+
+                // 推进播放指针
+                this.playTime += frameCount / sampleRate;
+                
             },
         },
 
