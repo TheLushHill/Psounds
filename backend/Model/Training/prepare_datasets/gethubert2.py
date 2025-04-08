@@ -16,7 +16,7 @@ def get_hubert(exp_name):
     all_parts = 1
     opt_dir = "Model\\Training\\List_file\\list2"
     cnhubert.cnhubert_base_path = "Model\\Training\\pretrained_models\\chinese-hubert-base"
-    is_half = True
+    is_half = False
     os.environ["CUDA_VISIBLE_DEVICES"] = os.environ.get("_CUDA_VISIBLE_DEVICES", "0")
 
     def my_save(fea,path):#####fix issue: torch.save doesn't support chinese path

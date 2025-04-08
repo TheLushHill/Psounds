@@ -22,7 +22,7 @@ def get_semanic(exp_name):
     opt_dir = "Model\\Training\\List_file\\list3"
     pretrained_s2G = "Model\\Training\\pretrained_models\\gsv-v2final-pretrained\\s2G2333k.pth"
     s2config_path = "Model\\Training\\Gs_Model\\configs\\s2.json"
-    is_half = True
+    is_half = False
     
     hubert_dir = "Model\\Training\\List_file\\list2\\4_cnhubert"
     semantic_path = "%s/6_name2semantic_%s.tsv" % (opt_dir, i_part)

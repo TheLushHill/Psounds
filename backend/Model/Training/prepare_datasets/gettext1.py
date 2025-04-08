@@ -16,7 +16,7 @@ def slice2bert(inp_list, exp_name):
     all_parts = 1
     opt_dir = "Model\\Training\\List_file\\list1"       # 生成文本文件，每行包含音频文件名、音素序列、单词到音素的映射和规范化文本。
     bert_pretrained_dir = "Model\\Training\\pretrained_models\\chinese-roberta-wwm-ext-large"  # 输出BERT
-    is_half = True
+    is_half = False
     os.environ["CUDA_VISIBLE_DEVICES"] = os.environ.get("_CUDA_VISIBLE_DEVICES", "0")
     failed_audio_log = "%s/failed_audio_%s.log" % (opt_dir, i_part)  # 记录处理失败的音频
 
@@ -27,7 +27,6 @@ def slice2bert(inp_list, exp_name):
         tmp_path="%s%s.pth"%(ttime(),i_part)
         torch.save(fea,tmp_path)
         shutil.move(tmp_path,"%s/%s"%(dir,name))
-        os.remove(tmp_path)
 
     txt_path = "%s/2_name2text_%s.txt" % (opt_dir, i_part)
     if os.path.exists(txt_path) == False:

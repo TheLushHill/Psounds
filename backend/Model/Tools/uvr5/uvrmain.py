@@ -12,7 +12,6 @@ from Model.config import infer_device,is_half,is_share;
 
 from mdxnet import MDXNetDereverb
 from vr import AudioPre, AudioPreDeEcho
-from bsroformer import Roformer_Loader
 
 weight_uvr5_root = os.path.join(os.path.dirname(__file__), "uvr5_weights");
 model_name = "HP5_only_main_vocal";

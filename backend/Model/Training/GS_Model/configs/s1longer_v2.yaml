@@ -5,7 +5,7 @@ pretrained_s1: Model/Training/pretrained_models/gsv-v2final-pretrained/s1bert25h
 train:
   seed: 1234
   epochs: 12
-  batch_size: 2
+  batch_size: 4
   save_every_n_epoch: 4
   precision: 16-mixed
   gradient_clip: 1.0

@@ -5,4 +5,13 @@ __pycache__/
 cache/
 
 Model/cache/
+
 Model/trained/
+
+*.ckpt
+
+*.pth
+
+*.exe
+
+*.bin

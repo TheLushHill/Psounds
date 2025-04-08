@@ -171,5 +171,5 @@ def main(args,exp_name):
         ckpt_path = None
     print("ckpt_path:", ckpt_path)
     trainer.fit(model, data_module, ckpt_path=ckpt_path)
-    if os.path.exists(f"Model\\Training\\SoVITS_weights\\half\\{exp_name}_e8.ckpt"):
-        print(f"模型训练完毕：Model\\Training\\SoVITS_weights\\half\\{exp_name}_e8.ckpt")
+    if os.path.exists(f"Model\\Training\\SoVITS_weights\\half\\{exp_name}_e12.ckpt"):
+        print(f"模型训练完毕：Model\\Training\\SoVITS_weights\\half\\{exp_name}_e12.ckpt")
