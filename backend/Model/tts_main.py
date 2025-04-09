@@ -47,8 +47,9 @@ from time import time as ttime
 
 default_data = {
         "text": "我是一个粉刷匠，粉刷本领强。我要把那新房子，刷得更漂亮。刷了房顶又刷墙，刷子像飞一样。哎呀我的小鼻子，变呀变了样。",
-        "text_language": "auto",
+        "character": None,
         "ref_audio_path": None,
+        "text_language": "auto",
         "prompt_text": None,
         "prompt_language": "auto",
         "batch_size": 1,
@@ -64,10 +65,8 @@ default_data = {
         "repetition_penalty": 1.35,
     }
 
-def get_audio(*data, streaming=False):
+def get_audio(data, streaming=False):
 
-    
-    data = dict(zip([key for key in default_data.keys()], data))
     data["stream"] = streaming
     
     if data.get("text") in ["", None]:

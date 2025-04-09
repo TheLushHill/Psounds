@@ -8,7 +8,7 @@
     <button class="train-button"
         @click="$emit('update-panel')"
     >
-        文本转换
+        转换
     </button>
 </template>
 

@@ -5,11 +5,9 @@
     import ConvertPanel from "./ConvertPanel.vue"
     import ConvertPanelButton from "./ConvertPanelButton.vue"
     import UploadFileButton from "./UploadFileButton.vue"
-    import modelConfig from "../config/model.json";
     import FileList from "./FileList.vue";
-    import axios from "axios";
 
-    import { moveToHead } from "../utils/utils.js"
+    import { moveToHead, parseWavHeader, pcmToFloat32} from "../utils/utils.js"
 
     export default {
         data() {
@@ -22,11 +20,12 @@
                 
                 isStreaming: false,
                 abortController: null,
-                test: Number,
+                leftover: null,
 
                 fileList: [],
+                hadFile: false,
 
-                modelList: modelConfig,
+                convertText: [],
             }
         },
         mounted() {
@@ -46,6 +45,11 @@
                 }
                 else {
                     this.fileList.unshift(newFile);
+                }
+
+
+                if (!this.hadFile) {
+                    this.hadFile = true;
                 }
 
                 if (!this.state.previewPanel) {
@@ -96,10 +100,23 @@
                 }
             },
 
-            async handleTestClick() { 
+            getUploadText(type, index) {
+                if (type == "pptx") {
+                    return this.fileList[0].content[index].join();
+                }
+                else if (type == "docx") {
+                    return this.fileList[0].content[index];
+                   
+                }
+            },
+
+            async getStreamAudio(type, index) { 
                 try {
                     if (this.isStreaming) return
                     this.isStreaming = true
+                    if (this.audioCtx) {
+                        await this.audioCtx.close();
+                    }
                     this.audioCtx = new AudioContext()
                     this.abortController = new AbortController()
                     // 重置播放指针
@@ -111,7 +128,7 @@
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
-                            "text": "你说的对，但是《原神》是由米哈游自主研发的一款全新开放世界冒险游戏。游戏发生在一个被称作「提瓦特」的幻想世界，在这里，被神选中的人将被授予「神之眼」，导引元素之力。你将扮演一位名为「旅行者」的神秘角色，在自由的旅行中邂逅性格各异、能力独特的同伴们，和他们一起击败强敌，找回失散的亲人——同时，逐步发掘「原神」的真相。",
+                            "text": this.getUploadText(type, index),
                         }),
                         responseType: "audio/wav",
                         
@@ -126,7 +143,7 @@
 
                         if (isFirstChunk) {
                             // 解析 WAV 头，取出通道数、采样率、位深
-                            header = this.parseWavHeader(value.buffer)
+                            header = parseWavHeader(value.buffer)
                             isFirstChunk = false
                         } else {
                             this.scheduleAudio(value, header)
@@ -139,29 +156,6 @@
                     this.isStreaming = false;
                 }
             },
-            parseWavHeader(buffer) {
-                const dv = new DataView(buffer);
-                const numChannels   = dv.getUint16(22, true);
-                const sampleRate    = dv.getUint32(24, true);
-                const bitsPerSample = dv.getUint16(34, true);
-                return { numChannels, sampleRate, bitsPerSample };
-            },
-            pcmToFloat32(pcmBuffer, bitsPerSample) {
-                const dv = new DataView(pcmBuffer.buffer, pcmBuffer.byteOffset, pcmBuffer.byteLength)
-                const count = pcmBuffer.byteLength / (bitsPerSample / 8)
-                const float32 = new Float32Array(count)
-                for (let i = 0; i < count; i++) {
-                    let sample = 0
-                    if (bitsPerSample === 16) {
-                    sample = dv.getInt16(i * 2, true) / 0x8000
-                    } else if (bitsPerSample === 8) {
-                    sample = (dv.getUint8(i) - 128) / 128
-                    }
-                    float32[i] = sample
-                }
-                return float32
-            },
-
             scheduleAudio(pcmChunk, header) {
                 const { numChannels, sampleRate, bitsPerSample } = header;
 
@@ -171,15 +165,34 @@
                 // 如果 chunk 太短，直接跳过
                 if (pcmChunk.byteLength < frameBytes) return;
 
+                // —— 先把上次剩余的半帧拼接回来 ——
+                if (this.leftover && this.leftover.byteLength) {
+                    const combined = new Uint8Array(this.leftover.byteLength + pcmChunk.byteLength);
+                    combined.set(this.leftover, 0);
+                    combined.set(pcmChunk, this.leftover.byteLength);
+                    pcmChunk = combined;
+                    this.leftover = null;
+                }
+
+                // 如果连一帧都不够，直接缓存并返回
+                if (pcmChunk.byteLength < frameBytes) {
+                    this.leftover = pcmChunk;
+                    return;
+                }
+
                 // 丢弃尾部不完整的字节
                 const remainder = pcmChunk.byteLength % frameBytes;
                 if (remainder !== 0) {
-                    // 丢掉最后 remainder 字节
+                    this.leftover = pcmChunk.slice(pcmChunk.byteLength - remainder);
                     pcmChunk = pcmChunk.slice(0, pcmChunk.byteLength - remainder);
                 }
 
+                if (!this.playTime || this.playTime < this.audioCtx.currentTime) {
+                    this.playTime = this.audioCtx.currentTime;
+                }
+
                 // PCM → Float32Array
-                const float32 = this.pcmToFloat32(pcmChunk, bitsPerSample);
+                const float32 = pcmToFloat32(pcmChunk, bitsPerSample);
                 const frameCount = float32.length / numChannels;
 
                 // 创建 AudioBuffer
@@ -205,6 +218,37 @@
                 this.playTime += frameCount / sampleRate;
                 
             },
+
+            getConvertText(object) {
+                let file = this.fileList[0];
+                let { index, checked} = object;
+                console.log(object);
+                if (file.type == "docx") {
+                    if (checked) {
+                        if (!this.convertText.includes(file.content[index]))
+                            this.convertText.push(file.content[index]);
+                    }
+                    else {
+                        this.convertText = this.convertText.filter((item) => {
+                            return item != file.content[index];
+                        })
+                    }
+
+                    
+                    let order = file.content.map((item) => {
+                        return item;
+                    })
+                    console.log(order);
+                    this.convertText = order.filter((item) => {
+                        let b = this.convertText.includes(item);
+                        console.log(b);
+                        return b;
+                    })
+
+                    console.log(this.convertText);
+                }
+            }
+            
         },
 
         computed: {
@@ -239,29 +283,20 @@
 <template>
     <div class="main">
         <div class="side-list">
-            <UploadFileButton 
-                @get-file="handleFileUploaded"
-            ></UploadFileButton>
-
-            <ConvertPanelButton
-                @update-panel="handleConvertButton"
-            ></ConvertPanelButton>
+            <div class="button">
+                <UploadFileButton 
+                    @get-file="handleFileUploaded"
+                ></UploadFileButton>
     
-            <TrainPanelButton
-                @update-panel="handleTrainButton"
-            ></TrainPanelButton>
-            
-            <div >
-                <button 
-                    @click="handleTestClick"
-                >
-                    test
-                </button>
-                <audio ref="audio" controls>
-
-                </audio>
+                <ConvertPanelButton
+                    @update-panel="handleConvertButton"
+                ></ConvertPanelButton>
+        
+                <TrainPanelButton
+                    @update-panel="handleTrainButton"
+                ></TrainPanelButton>
             </div>
-
+            
             <FileList
                 :fileList="fileList"
                 @file-select="handleFileSelect"
@@ -270,11 +305,15 @@
         <div class="content-container">
             <PreviewPanel
                 :isVisible="state.previewPanel"
+                :uploaded="hadFile"
                 :file="getFile"
+                @play-stream="getStreamAudio"
+                @checked="getConvertText"
             ></PreviewPanel>
 
             <ConvertPanel
                 :isVisible="state.convertPanel"
+                :text="convertText" 
             ></ConvertPanel>
 
             <TrainPanel 
@@ -292,6 +331,12 @@
     display: flex;
 }
 
+.side-list .button {
+    gap: 4px;
+    display: flex;
+    flex-direction: column;
+}
+
 .side-list {
     width: 16.7%;
     margin-right: 16px;
@@ -301,9 +346,10 @@
 }
 
 .content-container {
-    width: 100%;
-    height: 100%; 
+    width: 100%; 
     flex: 1 1 auto;
+    margin-top: 8px;
+    margin-bottom: 8px;
     display: flex;
     margin-right: 16px;
 }

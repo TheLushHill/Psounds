@@ -17,61 +17,61 @@ print("工作目录：", os.getcwd())
 
 app = Flask(__name__)
 
-# ALLOWED_EXTENSIONS = {'docx', 'pptx'}
-# ALLOWED_MIME_TYPES = {  # 这些是HTTPmime类型,特定文件的代号
-#     'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-#     'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-# }
+ALLOWED_EXTENSIONS = {'docx', 'pptx'}
+ALLOWED_MIME_TYPES = {  # 这些是HTTPmime类型,特定文件的代号
+    'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+}
 
-# # 适配中文的扩展名！
-# def allowed_file(filename):
-#     return '.' in filename and \
-#         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# @app.route('/upload', methods=['POST'])                             # JS的AJAX请求，fetch("/upload", {...})
-# def upload_file():
-
-#     file = request.files['file']
-#     filename = file.filename
-
-#     # 检查文件名是否为空
-#     if file.filename == '':
-#         return jsonify({"error": "空文件名"}), 400
-
-#     # 校验扩展名
-#     if not allowed_file(filename):
-#         return jsonify({"error": "文件扩展名不合法"}), 400
-
-#     # 删除文件内容检测部分，直接通过扩展名匹配
-#     file_extension = filename.rsplit('.', 1)[1].lower()
-#     detected_type = ALLOWED_MIME_TYPES.get(file_extension)
-#     # 如果扩展名不在允许列表中，直接拦截
-#     if not detected_type:
-#         return jsonify({"error": "文件类型不合法"}), 400
-#     file.seek(0)   # 重置文件指针
-
-#     # 6. 如果文件过大(大于1G)，则保存在本地文件
-#     # 先创建缓存文件夹以保存文件
-#     # if( >= 1000*1024):
-#     #   path1 = os.getcwd()
-#     #   os.makedirs(".Cache\Input", exist_ok=True)
-#     #   os.makedirs(".Cache\Output", exist_ok=True)
-#     #   UPLOAD_FOLDER = os.path.join(path1, ".Cache\Input")
-#     #   POST_FOLDER = os.path.join(path1, ".Cache\Output")
-#     #
-#     # 判断文件夹生成是否成功
-#     #   if not os.path.exists(UPLOAD_FOLDER):
-#     #       os.makedirs(UPLOAD_FOLDER)
-#     # 在本地保存
-#     #   file.save(os.path.join(UPLOAD_FOLDER, filename))
+# 适配中文的扩展名！
+def allowed_file(filename):
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-# # 在这里判断文件类型，并调用各类型的api   后续在这里判断一下内存大小
-#     if detected_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-#         return get_docxtext(file)
-#     elif detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-#         return get_ppttext(file)
+@app.route('/upload', methods=['POST'])                             # JS的AJAX请求，fetch("/upload", {...})
+def upload_file():
+
+    file = request.files['file']
+    filename = file.filename
+
+    # 检查文件名是否为空
+    if file.filename == '':
+        return jsonify({"error": "空文件名"}), 400
+
+    # 校验扩展名
+    if not allowed_file(filename):
+        return jsonify({"error": "文件扩展名不合法"}), 400
+
+    # 删除文件内容检测部分，直接通过扩展名匹配
+    file_extension = filename.rsplit('.', 1)[1].lower()
+    detected_type = ALLOWED_MIME_TYPES.get(file_extension)
+    # 如果扩展名不在允许列表中，直接拦截
+    if not detected_type:
+        return jsonify({"error": "文件类型不合法"}), 400
+    file.seek(0)   # 重置文件指针
+
+    # 6. 如果文件过大(大于1G)，则保存在本地文件
+    # 先创建缓存文件夹以保存文件
+    # if( >= 1000*1024):
+    #   path1 = os.getcwd()
+    #   os.makedirs(".Cache\Input", exist_ok=True)
+    #   os.makedirs(".Cache\Output", exist_ok=True)
+    #   UPLOAD_FOLDER = os.path.join(path1, ".Cache\Input")
+    #   POST_FOLDER = os.path.join(path1, ".Cache\Output")
+    #
+    # 判断文件夹生成是否成功
+    #   if not os.path.exists(UPLOAD_FOLDER):
+    #       os.makedirs(UPLOAD_FOLDER)
+    # 在本地保存
+    #   file.save(os.path.join(UPLOAD_FOLDER, filename))
+
+
+# 在这里判断文件类型，并调用各类型的api   后续在这里判断一下内存大小
+    if detected_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
+        return get_docxtext(file)
+    elif detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        return get_ppttext(file)
 
 
 # # 解析成功返回前端。前端发送一段文字后，在这里进行预处理
@@ -198,9 +198,9 @@ def process_audio_sf(sr, audio_data):
         return buffer.getvalue()
 
 # 获取处理后的音频数据
-def get_processed_audio(*data, streaming=False):
+def get_processed_audio(data, streaming=False):
     """获取处理后的音频数据"""
-    raw_audio = get_audio(*data, streaming=streaming)
+    raw_audio = get_audio(data, streaming=streaming)
     
     if not streaming:
         for sr, audio_data in raw_audio:
@@ -214,9 +214,16 @@ def get_processed_audio(*data, streaming=False):
 @app.route("/tts", methods=["POST"])
 def handletts():
     data = request.json;  
-    text = data.get("text");
+
+    data = {
+        "text": data.get("text", "你好，世界"),
+        "character": data.get("character", "Hutao"),
+        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
+        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
+    }
+    
     def generate():
-        for chunk in get_processed_audio(text):
+        for chunk in get_processed_audio(data):
             yield chunk;
 
     return Response(generate(), status=200,mimetype="audio/wav");
@@ -225,10 +232,16 @@ def handletts():
 @app.route("/tts_stream", methods=["POST"])
 def handletts_stream():
     data = request.json;
-    text = data.get("text", "");
+    
+    data = {
+        "text": data.get("text", "你好，世界"),
+        "character": data.get("character", "Hutao"),
+        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
+        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
+    }
 
     def generate():
-        for chunk in get_processed_audio(text, streaming=True):
+        for chunk in get_processed_audio(data, streaming=True):
             print(f"Yielding chunk of size: {len(chunk)}")  # 打印每个块的大小
             yield chunk;
 

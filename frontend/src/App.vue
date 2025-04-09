@@ -11,6 +11,6 @@
 </script>
 
 <template>
-    <AppHead></AppHead>
+    <!-- <AppHead></AppHead> -->
     <AppMain></AppMain>
 </template>

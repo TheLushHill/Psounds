@@ -13,7 +13,7 @@ def load_audio(file, sr):
         out, _ = (
             ffmpeg.input(file, threads=0)
             .output("-", format="f32le", acodec="pcm_f32le", ac=1, ar=sr)
-            .run(cmd=["ffmpeg", "-nostdin"], capture_stdout=True, capture_stderr=True)
+            .run(cmd=["Model/ffmpeg", "-nostdin"], capture_stdout=True, capture_stderr=True)
         )
     except Exception as e:
         raise RuntimeError(f"Failed to load audio: {e}")

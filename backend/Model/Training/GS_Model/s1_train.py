@@ -97,7 +97,7 @@ def parse_args():
         "-c",
         "--config_file",
         type=str,
-        default="configs/s1longer_v2.yaml",
+        default="Model/Training/GS_Model/configs/s1longer_v2.yaml",
         help="path of config file",
     )
     return parser.parse_args()

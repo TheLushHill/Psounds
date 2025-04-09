@@ -40,10 +40,11 @@
                 try {
                     const response = await axios.post("/api/upload", formData);
                     this.file.content = response.data;
-                    console.log("上传文件成功:");
+                    
 
                     // 传递文件给父组件,父组件监听get-file事件
                     this.$emit("get-file", this.file);
+                    alert("上传文件成功");
                 }
                 catch (error) {
                     console.error('上传文件错误:', {
