@@ -21,12 +21,27 @@
                     index: event.target.value,
                     checked: event.target.checked,
                 });
+            },
+
+            // 重置复选框状态
+            resetCheckboxes() {
+                const checkboxes = this.$el.querySelectorAll(".checkbox");
+                checkboxes.forEach((checkbox) => {
+                    checkbox.checked = false;
+                });
+                this.$emit("checkCanceled");
             }
             
         },
 
         watch: {
-            
+            resetCheckbox: {
+                handler(newVal) {
+                    if (newVal) {
+                        this.resetCheckboxes();
+                    }
+                }
+            }
         },
 
         computed: {
@@ -46,6 +61,8 @@
             },
             file: Object,
             uploaded: Boolean,
+            resetCheckbox: Boolean,
+            character: String,
         },
     }
 </script>
@@ -55,6 +72,7 @@
         <div v-if="this.uploaded">
             <div class="control-bar">
                 <div>文件预览界面，请勾选文本作为待转换内容。点击🔈试听当前模型文字转语音效果</div>
+                <div>当前模型为：{{ this.character }}</div>
             </div>
         </div>
         <div v-else>请先上传文件</div>
@@ -67,7 +85,6 @@
                 <input type="checkbox" class="checkbox" :value="index" @change="onChange" 
                 />
                 <span class="paragraph" 
-                    :class="'paragraph-' + index"
                 >{{ item }}<button class="play" :id="index" @click="handleClick">🔈</button></span>
                 
             </div>
@@ -78,7 +95,7 @@
         >
             <div class="page"
                 v-for="(item, index) in file.content">
-                <input type="checkbox" class="checkbox"
+                <input type="checkbox" class="checkbox" :value="index" @change="onChange"
                 />
                 <div>
                     <span class="index"

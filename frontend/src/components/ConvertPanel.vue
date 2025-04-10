@@ -1,21 +1,38 @@
 <script>
     import axios from "axios"
-    import { parseWavHeader, pcmToFloat32} from "../utils/utils.js"
+    import { parseWavHeader, pcmToFloat32, makeWavHeader} from "../utils/utils.js"
     export default {
         data() {
             return {
-                character: "Hutao",
                 blobUrl: null,
 
+                isPlaying: false,
                 isStreaming: false,
                 abortController: null,
                 leftover: null,
+                audioCtx: null,
+                playTime: null,
+
+                buffer: [],
             }
         },
 
-        mounted() {
-            this.audioCtx = new AudioContext();
-            this.playTime =this.audioCtx.currentTime;
+        computed: {
+            fullText() {
+                if (this.type === "docx") {
+                    return this.text.join();
+                }
+                else if (this.type === "pptx") {
+                    let t;
+                    for (items in this.text) {
+                        for (item in items) {
+                            t = item.join();
+                        }
+                    }
+                    return t;
+                }
+                
+            }
         },
 
         methods: {
@@ -28,12 +45,14 @@
                 }, {
                     responseType: "blob",
                 })
+                // console.log(response.data)
                 let blob = new Blob([response.data], { type: "audio/wav" });
                 this.blobUrl = URL.createObjectURL(blob);
                 this.$refs.audio.src = this.blobUrl;
                 this.$refs.audio.play();
             },
 
+            // 获取流式音频，音频解码，音频调度，音频拼接
             async getStreamAudio() { 
                 try {
                     if (this.isStreaming) return
@@ -52,7 +71,7 @@
                             "Content-Type": "application/json",
                         },
                         body: JSON.stringify({
-                            "text": this.text.join(),
+                            "text": this.fullText,
                             "character": this.character,
                         }),
                         responseType: "audio/wav",
@@ -71,6 +90,7 @@
                             header = parseWavHeader(value.buffer)
                             isFirstChunk = false
                         } else {
+                            this.buffer.push(value);
                             this.scheduleAudio(value, header)
                         }
                     }
@@ -79,8 +99,32 @@
                     alert("Error: " + error.message);
                 } finally {
                     this.isStreaming = false;
+
+                    const pcmBytes = this.buffer.reduce((acc, buf) => acc + buf.byteLength, 0);
+                    const pcmAll = new Uint8Array(pcmBytes);
+                    let offset = 0;
+                    for (const buf of this.buffer) {
+                        pcmAll.set(new Uint8Array(buf), offset);
+                        offset += buf.byteLength;
+                    }
+
+                    const wavHeader = makeWavHeader({
+                        pcmByteLength: pcmBytes,
+                        sampleRate: 32000,       // 与后端保持一致
+                        numChannels: 1,          // 与后端保持一致
+                        bytesPerSample: 2,       // 16 位 → 2 字节
+                    });
+
+                    let blob = new Blob([wavHeader, pcmAll], { type: "audio/wav" });
+                    this.blobUrl = URL.createObjectURL(blob);
+                    this.$refs.audio.src = this.blobUrl;
+                    this.$refs.url.href = this.blobUrl;
+                    
+                    this.buffer = [];
                 }
             },
+
+            // 音频调度
             scheduleAudio(pcmChunk, header) {
                 const { numChannels, sampleRate, bitsPerSample } = header;
 
@@ -138,11 +182,45 @@
                 src.buffer = buffer;
                 src.connect(this.audioCtx.destination);
                 src.start(this.playTime);
+                this.isPlaying = true;
 
                 // 推进播放指针
                 this.playTime += frameCount / sampleRate;
-                
             },
+
+            // 更新角色模型
+            updateCharacter(event) {
+                let character = event.target.value;
+                this.$emit("update-character", character);
+            },
+
+            // 下载完整音频
+            handleDownload() {
+                if (this.blobUrl) {
+                    this.$refs.url.click()
+                }
+                else {
+                    alert("请先获取音频")
+                }
+            },
+
+            async togglePlayPause() {
+                if (this.audioCtx === null) {
+                    alert("请先获取音频");
+                    return
+                }
+                else if (this.audioCtx.state === "running") {
+                    this.audioCtx.suspend();
+                    this.isPlaying = false;
+                } else if (this.audioCtx.state === "suspended") {
+                    this.audioCtx.resume();
+                    this.isPlaying = true;
+                }
+            },
+
+            stopStreamPlaying() {
+                this.togglePlayPause();
+            }
         },
         props: {
             isVisible: Boolean,
@@ -150,13 +228,19 @@
                 type: Array,
                 default: () => [],
             },
+            type: String,
+            character: String,
+            characterList: Array,
+        },
+
+        watch: {
         }
     }
 </script>
 
 <template>
     <div class="convert-panel" v-show="isVisible">
-        <div class="view" v-if="text.length === 0">暂无内容，请在预览面板中选择内容。</div>
+        <div class="view" v-if="text.length === 0">暂无内容，请上传文件后在文件预览界面中选择内容。</div>
         <div class="view"v-else>
             <div v-for="(item, index) in text" :key="index" class="text-line">
                 <span>{{ item }}</span>
@@ -169,12 +253,20 @@
                 <audio ref="audio" controls></audio>
             </div>
             <div class="character-bar">
-                <span>当前角色模型：</span>
-                <select class="character" v-model="character">
-                    <option value="Hutao" selected>胡桃</option>
-                    <option value="才羽桃井">才羽桃井</option>
-                    <option value="神里绫华">神里绫华</option>
-                </select>
+                <div class="item">
+                    <span>当前角色模型：</span>
+                    <select @change="updateCharacter">
+                        <template v-for="(item, index) in characterList">
+                            <option :value="item.value" :selected="index === 0">{{ item.name }}</option>
+                        </template>
+                    </select>
+                </div>
+                <button v-if="this.isPlaying" class="item" @click="stopStreamPlaying">暂停流式音频</button>
+                <button v-else class="item" @click="togglePlayPause">播放流式音频</button>
+                <button class="item" @click="handleDownload">
+                    <a :href="blobUrl" download="audio.wav" ref="url"></a>
+                    下载完整音频
+                </button>
             </div>
         </div>
     </div>
@@ -231,15 +323,22 @@
 }
 
 .character-bar {
-    background-color: #F0F0F5;
-    padding: 12px; 
-    height: 15%; 
     display: flex;
-    align-items: center; 
-    border-radius: 8px;  
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
-    margin-top: 10px;
-    gap: 8px; 
+    flex-direction: column;
+    padding: 8px;
+    align-items: justify-content;
+    gap: 8px;
+}
+
+.character-bar .item {
+    border-radius: 12px;
+    background-color: #DCDAF5;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 8px;
+    flex-grow: 1;
 }
 
 .character-bar span {
@@ -249,8 +348,7 @@
 }
 
 .character-bar select {
-    flex: 1; /* 让下拉框占据剩余空间 */
-    padding: 8px; /* 增加内边距 */
+    padding: 4px 8px; /* 增加内边距 */
     font-size: 14px; /* 调整字体大小 */
     border: 1px solid #CCC; /* 添加边框 */
     border-radius: 4px; /* 圆角边框 */
@@ -268,4 +366,7 @@
     border-color: #5B9BD5; /* 聚焦时的边框颜色 */
     box-shadow: 0 0 4px rgba(91, 155, 213, 0.5); /* 聚焦时的阴影效果 */
 }
+
+.character-bar button:hover {
+    background-color: #D1CEE9;}
 </style>

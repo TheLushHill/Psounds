@@ -59,7 +59,7 @@ class App_Config(BaseModel):
             for key, value in config.items():
                 setattr(self, key, value)
 
-app_config = App_Config("common_config.json")
-api_config = Api_Config("common_config.json")
+app_config = App_Config("Model/common_config.json")
+api_config = Api_Config("Model/common_config.json")
 
 
