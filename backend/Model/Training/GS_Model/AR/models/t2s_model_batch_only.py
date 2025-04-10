@@ -2,8 +2,8 @@
 import torch
 from tqdm import tqdm
 
-from AR.models.utils import make_pad_mask
-from AR.models.utils import (
+from Model.Training.GS_Model.AR.models.utils import make_pad_mask
+from Model.Training.GS_Model.AR.models.utils import (
     topk_sampling,
     sample,
     logits_to_probs,
@@ -12,11 +12,11 @@ from AR.models.utils import (
     make_reject_y, 
     get_batch_logps
 )
-from AR.modules.embedding import SinePositionalEmbedding
-from AR.modules.embedding import TokenEmbedding
-from AR.modules.transformer import LayerNorm
-from AR.modules.transformer import TransformerEncoder
-from AR.modules.transformer import TransformerEncoderLayer
+from Model.Training.GS_Model.AR.modules.embedding import SinePositionalEmbedding
+from Model.Training.GS_Model.AR.modules.embedding import TokenEmbedding
+from Model.Training.GS_Model.AR.modules.transformer import LayerNorm
+from Model.Training.GS_Model.AR.modules.transformer import TransformerEncoder
+from Model.Training.GS_Model.AR.modules.transformer import TransformerEncoderLayer
 from torch import nn
 from torch.nn import functional as F
 from torchmetrics.classification import MulticlassAccuracy

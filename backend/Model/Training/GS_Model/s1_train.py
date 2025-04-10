@@ -109,7 +109,7 @@ def main(args,exp_name):
     
     config = load_yaml_config(args.config_file)
 
-    output_dir = Path(config["output_dir"])
+    output_dir = Path(f"Model/trained/{exp_name}")
     output_dir.mkdir(parents=True, exist_ok=True)
 
     ckpt_dir = output_dir / "ckpt"
@@ -171,5 +171,4 @@ def main(args,exp_name):
         ckpt_path = None
     print("ckpt_path:", ckpt_path)
     trainer.fit(model, data_module, ckpt_path=ckpt_path)
-    if os.path.exists(f"Model\\Training\\SoVITS_weights\\half\\{exp_name}_e12.ckpt"):
-        print(f"模型训练完毕：Model\\Training\\SoVITS_weights\\half\\{exp_name}_e12.ckpt")
+    

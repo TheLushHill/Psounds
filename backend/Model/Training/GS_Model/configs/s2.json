@@ -97,6 +97,5 @@
     "version": "v2"
   },
   "s2_ckpt_dir": "Model\\logs\\logs_s2",
-  "content_module": "cnhubert",
-  "save_weight_dir": "Model\\Training\\SoVITS_weights"
+  "content_module": "cnhubert"
 }

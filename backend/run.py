@@ -1,19 +1,44 @@
 # 该文件夹中定义前端向后端发送文件/请求，后端判断是哪种文件类型并调用该文件的api
 
-# import logging, warnings
-# from modelscope.utils.logger import get_logger
-# logging.basicConfig(level=logging.WARNING)
-# modelscope_logger = get_logger()
-# modelscope_logger.setLevel(logging.ERROR)  # 设置为 ERROR 或更高
-# modelscope_logger.propagate = False
+from glob import glob
+import logging, warnings
+from modelscope.utils.logger import get_logger
+logging.basicConfig(level=logging.WARNING)
+modelscope_logger = get_logger()
+modelscope_logger.setLevel(logging.ERROR)  # 设置为 ERROR 或更高
+modelscope_logger.propagate = False
 
-from flask import Flask, request, jsonify, Response
-from io import BytesIO
-import os, sys, io, requests, json
+from flask import Flask, request, jsonify, render_template, session, Response
+import os, sys, requests, json, io
+import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+import argparse
+from multiprocessing import freeze_support
+sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
+
 from GetWord.docx.DocxWord import get_docxtext
 from GetWord.pptx.PPTWord import get_ppttext
-print("工作目录：", os.getcwd())
+from pptx import Presentation
+from pptx.util import Inches
+
+from Model.Tools.uvr5.uvrmain import uvr
+from Model.Tools.slice_audio.slice_audio import slice_audio
+from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
+from Model.Tools.asr.funasr_asr import execute_asr
+import Model.Tools.subfix.subfix as subfix
+
+from Model.Training.prepare_datasets.gettext1 import slice2bert
+from Model.Training.prepare_datasets.gethubert2 import get_hubert
+from Model.Training.prepare_datasets.getsemanic3 import get_semanic
+
+from pathlib import Path
+sys.path.append(str(Path("Model/Training/Gs_Model")))
+from Model.Training.GS_Model.s1_train import parse_args, main as s1_main
+from Model.Training.GS_Model.s2_train import main as s2_main
+
+from Model.tts_main import get_audio
+import soundfile as sf
 
 app = Flask(__name__)
 
@@ -31,7 +56,6 @@ def allowed_file(filename):
 
 @app.route('/upload', methods=['POST'])                             # JS的AJAX请求，fetch("/upload", {...})
 def upload_file():
-
     file = request.files['file']
     filename = file.filename
 
@@ -46,10 +70,18 @@ def upload_file():
     # 删除文件内容检测部分，直接通过扩展名匹配
     file_extension = filename.rsplit('.', 1)[1].lower()
     detected_type = ALLOWED_MIME_TYPES.get(file_extension)
+
     # 如果扩展名不在允许列表中，直接拦截
     if not detected_type:
         return jsonify({"error": "文件类型不合法"}), 400
+    header = file.stream.read(4)
     file.seek(0)   # 重置文件指针
+    if header != b'PK\x03\x04':
+        return "Invalid PPTX (not a ZIP file)", 400
+    
+    # 如果是PPT文件，则保存
+    # if detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+    #     file.save(os.path.join("PPT", filename))
 
     # 6. 如果文件过大(大于1G)，则保存在本地文件
     # 先创建缓存文件夹以保存文件
@@ -71,136 +103,130 @@ def upload_file():
     if detected_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
         return get_docxtext(file)
     elif detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        return get_ppttext(file)
+        k = get_ppttext(file)
+        return jsonify(k)
 
 
-# # 解析成功返回前端。前端发送一段文字后，在这里进行预处理
-# import argparse
-# import logging
-# import os,sys
-# from multiprocessing import freeze_support
-# sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
+# 解析成功返回前端。前端发送一段文字后，在这里进行预处理
 
-# from Model.Tools.uvr5.uvrmain import uvr
-# from Model.Tools.slice_audio.slice_audio import slice_audio
-# from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
-# from Model.Tools.asr.funasr_asr import execute_asr
-# import Model.Tools.subfix.subfix as subfix
-# import gradio as gr
+# 前端发送过来的人物音频，先保存到Model\\input_audio
+@app.route('/SaveAudio', methods=['POST'])
+def SaveAudio():
+    ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'm4a'}
+    def allowed_audio_file(filename):
+        return '.' in filename and \
+            filename.rsplit('.', 1)[1].lower() in ALLOWED_AUDIO_EXTENSIONS
+    
+    save_dir = os.path.abspath("Model\\input_audio")
+    audio_files = request.files.getlist('file')  # 获取多个文件
 
-# ALLOWED_EXTENSIONS = {'wav', 'mp3', 'm4a'}
-# def allowed_audio_file(filename):
-#     return '.' in filename and \
-#            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-# # 前端发送过来的人物音频，先保存到Model\\input_audio
-# @app.route('/save', methods=['POST'])
-# def save():
-#     audio_file = request.files['file']
-#     audio_filename = audio_file.filename
-#     save_dir = os.path.abspath("Model\\input_audio")
-#     save_path = os.path.join(save_dir, audio_filename)
-#     if not allowed_audio_file(audio_file.filename):
-#         return "文件类型不支持", 400
-#     if os.path.exists("Model\\input_audio"):
-#         audio_file.save(save_path)
-#     else:
-#         os.makedirs("Model\\input_audio")
-#         audio_file.save(save_path)
-
-#     if os.path.exists(f"Model\\input_audio\\{audio_file.filename}"):       
-#         return jsonify({"log": "音频保存成功"}), 200
-
-
-# ##数据集的预处理
-# @app.route('/preprocess', methods=['POST'])
-# def preprocess():
-#     result1 = uvr("Model\\input_audio",
-#                  "Model\\Tools\\output_cache\\uvr5_opt\\vocal",
-#                  "Model\\Tools\\output_cache\\uvr5_opt\\instrumental"
-#                  )
-#     print(result1)
-
-#     result2 = slice_audio("Model\\Tools\\output_cache\\uvr5_opt\\vocal", "Model\\Tools\\output_cache\\slicer_opt")
-#     print(result2)
-
-#     result3 = execute_denoise("Model\\Tools\\output_cache\\slicer_opt", "Model\\Tools\\output_cache\\denoise_opt")
-#     print(result3)
-
-#     result4 = execute_asr("Model\\Tools\\output_cache\\denoise_opt", "Model\\Tools\\output_cache\\asr_opt")
-#     print(result4)
-
-#     return jsonify({"log": "预处理完成"}), 200
+    for file in audio_files:
+        if file:
+            filename = file.filename
+            file_path = os.path.join(save_dir, filename)
+            if allowed_audio_file(file.filename):   
+                file.save(file_path)
+                print(f"音频文件 {filename} 保存成功")
+            else:
+                return jsonify({"error": "音频文件类型不合法"}), 400
+        else:
+            return jsonify({"error": "没有找到文件或文件名空"}), 400
+           
+    return jsonify({"状态": "音频保存成功" , "文件夹路径": "Model\\input_audio"}), 200
+    
+# 解析成功,把前端刚刚上传的文件名依次返回前端
+@app.route('/getfilename', methods=['POST'])
+def get_filename():
+    try:
+        # 获取目录下所有文件名
+        files = os.listdir("Model\\input_audio")
+        # 过滤出文件（排除目录）
+        files = [f for f in files if os.path.isfile(os.path.join("Model\\input_audio", f))]
+        return jsonify({'filenames': files}), 200
+    except FileNotFoundError:
+        return jsonify({'error': 'Directory not found'}), 404
 
 
-# ##之后要重定向到打标界面，手动进行修正
+##数据集的预处理
+@app.route('/preprocess', methods=['POST'])
+def preprocess():
+    result1 = uvr("Model\\input_audio",
+                 "Model\\Tools\\output_cache\\uvr5_opt\\vocal",
+                 "Model\\Tools\\output_cache\\uvr5_opt\\instrumental"
+                 )
+    print(result1)
+
+    result2 = slice_audio("Model\\Tools\\output_cache\\uvr5_opt\\vocal", "Model\\Tools\\output_cache\\slicer_opt")
+    print(result2)
+
+    result3 = execute_denoise("Model\\Tools\\output_cache\\slicer_opt", "Model\\Tools\\output_cache\\denoise_opt")
+    print(result3)
+
+    result4 = execute_asr("Model\\Tools\\output_cache\\denoise_opt", "Model\\Tools\\output_cache\\asr_opt")
+    print(result4)
+
+    if result4:
+        return jsonify({"log": "预处理完成"}), 200
+    else:
+        return jsonify({"error": "预处理失败"}), 500
+
+##之后要重定向到打标界面，手动进行修正
 # @app.route('/subfix', methods=['POST'])
 # def subfix_editor():
 #     subfix.start()
+#     return jsonify({"log": "打标界面已启动"}), 200
 
-# # 格式化音频
-# from Model.Training.prepare_datasets.gettext1 import slice2bert
-# from Model.Training.prepare_datasets.gethubert2 import get_hubert
-# from Model.Training.prepare_datasets.getsemanic3 import get_semanic
-# @app.route('/format', methods=['POST'])
-# def format_audio():
-#     global exp_name
-#     exp_name = request.json.get("exp_name")
-#     slice2bert("Model/Tools/output_cache/asr_opt/denoise_opt.list",exp_name)
-#     get_hubert(exp_name)
-#     get_semanic(exp_name)
+# 格式化音频
+@app.route('/format', methods=['POST'])
+def format_audio():
+    character = request.json.get("character")
+    slice2bert("Model/Tools/output_cache/asr_opt/denoise_opt.list", character)
+    get_hubert(character)
+    get_semanic(character)
     
-#     return jsonify({"log": "音频格式化成功，可以训练模型"}), 200
+    return jsonify({"log": "音频格式化成功，可以训练模型"}), 200
 
 
-# # 训练模型
-# import os, sys
-# from pathlib import Path
-# sys.path.append(str(Path("Model/Training/Gs_Model")))
 
-# from Model.Training.GS_Model.s1_train import parse_args, main as s1_main
-# from Model.Training.GS_Model.s2_train import main as s2_main
+# 训练模型
+@app.route('/train', methods=['POST'])
+def train():
 
-# @app.route('/train', methods=['POST'])
-# def train():
+    #调用 s1_train 的 main 函数
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "-c",
+        "--config_file",
+        type=str,
+        default="Model/Training/GS_Model/configs/s1longer_v2.yaml",
+        help="path of config file",
+    )
+    args = parser.parse_args()
+    character = request.json.get("character") 
 
-#     #调用 s1_train 的 main 函数
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument(
-#         "-c",
-#         "--config_file",
-#         type=str,
-#         default="configs/s1longer_v2.yaml",
-#         help="path of config file",
-#     )
-#     args = parser.parse_args()
-#     exp_name = request.json.get("exp_name") 
+    # GPT模型训练
+    s1_main(args, character)
 
-#     # GPT模型训练
-#     s1_main(args, exp_name)
+    # SoVITS模型训练
+    s2_main(character)
 
-#     # SoVITS模型训练
-#     s2_main(exp_name)
+    if os.path.exists(f"Model/trained/{character}/%s_e%s.ckpt" % (character, 12)):
+        sovits_weights = glob.glob(f"Model/trained/{character}/*e12*.pth")
+        if sovits_weights:
+            return jsonify({"log": "训练完成"}), 200
 
-#     if os.path.exists("Model/Training/GPT_weights/%s_e%s.ckpt" % (exp_name, 12)):
-#         if os.path.exists("Model/Training/SoVITS_weights/*e12*.ckpt"):
-#             return jsonify({"log": "训练完成"}), 200
-        
 
-# tts 开始
-# 使用soundfile库处理音频数据
-# tts 库
-from Model.tts_main import get_audio
-import soundfile as sf
+# 训练完成后，在GPT_weights、SoVITS_weights中提取模型，进行TTS
+#tts 开始
 def process_audio_sf(sr, audio_data):
     with io.BytesIO() as buffer:
         sf.write(buffer, audio_data, sr, format='WAV')
         return buffer.getvalue()
 
 # 获取处理后的音频数据
-def get_processed_audio(data, streaming=False):
+def get_processed_audio(*data, streaming=False):
     """获取处理后的音频数据"""
-    raw_audio = get_audio(data, streaming=streaming)
+    raw_audio = get_audio(*data, streaming=streaming)
     
     if not streaming:
         for sr, audio_data in raw_audio:
@@ -214,16 +240,9 @@ def get_processed_audio(data, streaming=False):
 @app.route("/tts", methods=["POST"])
 def handletts():
     data = request.json;  
-
-    data = {
-        "text": data.get("text", "你好，世界"),
-        "character": data.get("character", "Hutao"),
-        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
-        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
-    }
-    
+    text = data.get("text");
     def generate():
-        for chunk in get_processed_audio(data):
+        for chunk in get_processed_audio(text):
             yield chunk;
 
     return Response(generate(), status=200,mimetype="audio/wav");
@@ -232,16 +251,10 @@ def handletts():
 @app.route("/tts_stream", methods=["POST"])
 def handletts_stream():
     data = request.json;
-    
-    data = {
-        "text": data.get("text", "你好，世界"),
-        "character": data.get("character", "Hutao"),
-        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
-        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
-    }
+    text = data.get("text", "");
 
     def generate():
-        for chunk in get_processed_audio(data, streaming=True):
+        for chunk in get_processed_audio(text, streaming=True):
             print(f"Yielding chunk of size: {len(chunk)}")  # 打印每个块的大小
             yield chunk;
 
@@ -249,5 +262,71 @@ def handletts_stream():
 # tts 结束
 
 
+#当用户提供的是PPT文件时，在每一页中添加音频
+@app.route('/PPTaudio', methods=['POST'])
+def PPTaudio():
+    file = request.files['file']
+    filename = file.filename
+    file_extension = filename.rsplit('.', 1)[1].lower()
+    detected_type = ALLOWED_MIME_TYPES.get(file_extension)
+    if detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
+        k = get_ppttext(file)
+
+    character = request.json.get("character")
+
+    # get_processed_audio(data)
+    # data = {
+    #     "text" = ...,
+    #     "character" = character
+    # }
+
+    try:
+        prs = Presentation(file)
+    except Exception as e:
+        return jsonify({"error": f"PPT文件读取失败: {str(e)}"}), 500
+
+    # for text in k:
+
+    slide_id = 0
+    for slide in prs.slides:
+        try:
+            slide_id += 1
+
+            audio = get_processed_audio(text)
+
+            left = Inches(1)
+            top = Inches(1)
+            width = Inches(1)
+            height = Inches(1)
+
+            # 重置音频流指针
+            audio.seek(0)
+
+            # 使用 add_media 添加音频
+            audio_shape = slide.shapes.add_movie(
+                audio,
+                left, top, width, height,
+                poster_frame_image=None
+            )
+
+            audio_shape.media_format.show_controls = False
+
+        except Exception as e:
+            print(f"第 {slide_id} 页音频添加失败: {str(e)}")
+            continue  # 跳过当前页，继续处理
+
+    output_path = os.path.join("PPT", 'modified_' + filename)
+    try:
+        prs.save(output_path)
+    except Exception as e:
+        return jsonify({"error": f"PPT保存失败: {str(e)}"}), 500
+
+    return jsonify({
+        "log": "音频添加到PPT成功",
+        "output_path": output_path
+    }), 200
+
+
+
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=8000, debug=True, use_reloader=False)
+    app.run(host="127.0.0.1", port=8000, debug=True)

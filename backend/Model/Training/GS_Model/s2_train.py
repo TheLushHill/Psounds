@@ -21,20 +21,20 @@ logging.getLogger("matplotlib").setLevel(logging.INFO)
 logging.getLogger("h5py").setLevel(logging.INFO)
 logging.getLogger("numba").setLevel(logging.INFO)
 from random import randint
-from module import commons
+from Model.Training.GS_Model.module import commons
 
-from module.data_utils import (
+from Model.Training.GS_Model.module.data_utils import (
     TextAudioSpeakerLoader,
     TextAudioSpeakerCollate,
     DistributedBucketSampler,
 )
-from module.models import (
+from Model.Training.GS_Model.module.models import (
     SynthesizerTrn,
     MultiPeriodDiscriminator,
 )
-from module.losses import generator_loss, discriminator_loss, feature_loss, kl_loss
-from module.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
-from process_ckpt import savee
+from Model.Training.GS_Model.module.losses import generator_loss, discriminator_loss, feature_loss, kl_loss
+from Model.Training.GS_Model.module.mel_processing import mel_spectrogram_torch, spec_to_mel_torch
+from Model.Training.GS_Model.process_ckpt import savee
 
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.deterministic = False
@@ -504,6 +504,7 @@ def train_and_evaluate(
                     exp_name,
                     epoch,
                     savee(
+                        exp_name,
                         ckpt,
                         exp_name + "_e%s_s%s" % (epoch, global_step),
                         epoch,

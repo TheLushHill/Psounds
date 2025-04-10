@@ -17,15 +17,15 @@ import torch.nn.functional as F
 import yaml
 from transformers import AutoModelForMaskedLM, AutoTokenizer
 
-from AR.models.t2s_lightning_module import Text2SemanticLightningModule
-from feature_extractor.cnhubert import CNHubert
-from module.models import SynthesizerTrn
+from Model.Training.GS_Model.AR.models.t2s_lightning_module import Text2SemanticLightningModule
+from Model.Training.GS_Model.feature_extractor.cnhubert import CNHubert
+from Model.Training.GS_Model.module.models import SynthesizerTrn
 import librosa
 from time import time as ttime
-from my_utils import load_audio
-from module.mel_processing import spectrogram_torch
-from TTS_infer_pack.text_segmentation_method import splits
-from TTS_infer_pack.TextPreprocessor import TextPreprocessor
+from Model.Training.my_utils import load_audio
+from Model.Training.GS_Model.module.mel_processing import spectrogram_torch
+from Model.Training.GS_Model.TTS_infer_pack.text_segmentation_method import splits,auto_cut
+from Model.Training.GS_Model.TTS_infer_pack.TextPreprocessor import TextPreprocessor
 
 import pickle
 
@@ -85,8 +85,8 @@ class TTS_Config:
     def __init__(self, configs: Union[dict, str]=None):
         
         # 设置默认配置文件路径
-        configs_base_path:str = "Model/Training/GS_Model/configs/"
-        os.makedirs(configs_base_path, exist_ok=True)
+        configs_base_path:str = "Model/Training/GS_Model/configs"
+        # os.makedirs(configs_base_path, exist_ok=True)
         self.configs_path:str = os.path.join(configs_base_path, "tts_infer.yaml")
         
         if configs in ["", None]:
@@ -98,8 +98,12 @@ class TTS_Config:
         if isinstance(configs, str):
             self.configs_path = configs
             configs:dict = self._load_configs(self.configs_path)
-            
-        assert isinstance(configs, dict)
+        
+        if not isinstance(configs, dict):
+            raise TypeError(
+                f"configs 必须是字典类型，当前类型: {type(configs)}。"
+                f"请检查传入参数是否为字典或有效的配置文件路径。"
+            )
         default_configs:dict = configs.get("default", None)
         if default_configs is not None:
             self.default_configs = default_configs
@@ -147,6 +151,11 @@ class TTS_Config:
         with open(configs_path, 'r') as f:
             configs = yaml.load(f, Loader=yaml.FullLoader)
     
+        if not isinstance(configs, dict):
+            raise ValueError(
+                f"配置文件内容必须是字典格式，实际类型: {type(configs)}\n"
+                f"提示：请检查YAML文件的顶层键值对结构。"
+            )
         return configs
 
     def save_configs(self, configs_path:str=None)->None:
@@ -195,7 +204,7 @@ class TTS:
         if isinstance(configs, TTS_Config):
             self.configs = configs
         else:
-            self.configs:TTS_Config = TTS_Config(configs)
+            self.configs:TTS_Config = TTS_Config(configs="Model/Training/GS_Model/configs/tts_infer.yaml")
         
         self.t2s_model:Text2SemanticLightningModule = None
         self.vits_model:SynthesizerTrn = None

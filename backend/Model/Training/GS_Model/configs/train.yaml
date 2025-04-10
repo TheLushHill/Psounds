@@ -2,8 +2,7 @@ gpu:
   n_card: 1
   n_process_per_card: 2
 io:
-  text_path: D:\RVC1006\GPT-SoVITS\GPT_SoVITS
-  save_every_n_epoch: 1
+  text_path: G:\\TTS\\Backend\\Model\\GS
   precision: 16-mixed
   gradient_clip: 1.0
 optimizer:
