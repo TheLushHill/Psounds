@@ -224,9 +224,9 @@ def process_audio_sf(sr, audio_data):
         return buffer.getvalue()
 
 # 获取处理后的音频数据
-def get_processed_audio(*data, streaming=False):
+def get_processed_audio(data, streaming=False):
     """获取处理后的音频数据"""
-    raw_audio = get_audio(*data, streaming=streaming)
+    raw_audio = get_audio(data, streaming=streaming)
     
     if not streaming:
         for sr, audio_data in raw_audio:
@@ -240,9 +240,16 @@ def get_processed_audio(*data, streaming=False):
 @app.route("/tts", methods=["POST"])
 def handletts():
     data = request.json;  
-    text = data.get("text");
+
+    data = {
+        "text": data.get("text", "你好，世界"),
+        "character": data.get("character", "Hutao"),
+        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
+        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
+    }
+    
     def generate():
-        for chunk in get_processed_audio(text):
+        for chunk in get_processed_audio(data):
             yield chunk;
 
     return Response(generate(), status=200,mimetype="audio/wav");
@@ -251,10 +258,16 @@ def handletts():
 @app.route("/tts_stream", methods=["POST"])
 def handletts_stream():
     data = request.json;
-    text = data.get("text", "");
+    
+    data = {
+        "text": data.get("text", "你好，世界"),
+        "character": data.get("character", "Hutao"),
+        "prompt_text": data.get("prompt_text", "我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫"),
+        "ref_audio_path": data.get("ref_audio_path", "Model/trained/Hutao/我说白术，你不会看不出来吧？难不成你师父，忘了教你这门功夫？.wav"),
+    }
 
     def generate():
-        for chunk in get_processed_audio(text, streaming=True):
+        for chunk in get_processed_audio(data, streaming=True):
             print(f"Yielding chunk of size: {len(chunk)}")  # 打印每个块的大小
             yield chunk;
 
@@ -329,4 +342,4 @@ def PPTaudio():
 
 
 if __name__ == '__main__':
-    app.run(host="127.0.0.1", port=8000, debug=True)
+    app.run(host="127.0.0.1", port=8000, debug=True, use_reloader=False)
