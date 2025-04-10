@@ -1,7 +1,7 @@
 # 该文件夹中定义前端向后端发送文件/请求，后端判断是哪种文件类型并调用该文件的api
 
 from glob import glob
-import logging, warnings
+import logging, warnings, tempfile
 from modelscope.utils.logger import get_logger
 logging.basicConfig(level=logging.WARNING)
 modelscope_logger = get_logger()
@@ -22,20 +22,20 @@ from GetWord.pptx.PPTWord import get_ppttext
 from pptx import Presentation
 from pptx.util import Inches
 
-from Model.Tools.uvr5.uvrmain import uvr
-from Model.Tools.slice_audio.slice_audio import slice_audio
-from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
-from Model.Tools.asr.funasr_asr import execute_asr
-import Model.Tools.subfix.subfix as subfix
+# from Model.Tools.uvr5.uvrmain import uvr
+# from Model.Tools.slice_audio.slice_audio import slice_audio
+# from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
+# from Model.Tools.asr.funasr_asr import execute_asr
+# import Model.Tools.subfix.subfix as subfix
 
-from Model.Training.prepare_datasets.gettext1 import slice2bert
-from Model.Training.prepare_datasets.gethubert2 import get_hubert
-from Model.Training.prepare_datasets.getsemanic3 import get_semanic
+# from Model.Training.prepare_datasets.gettext1 import slice2bert
+# from Model.Training.prepare_datasets.gethubert2 import get_hubert
+# from Model.Training.prepare_datasets.getsemanic3 import get_semanic
 
-from pathlib import Path
-sys.path.append(str(Path("Model/Training/Gs_Model")))
-from Model.Training.GS_Model.s1_train import parse_args, main as s1_main
-from Model.Training.GS_Model.s2_train import main as s2_main
+# from pathlib import Path
+# sys.path.append(str(Path("Model/Training/Gs_Model")))
+# from Model.Training.GS_Model.s1_train import parse_args, main as s1_main
+# from Model.Training.GS_Model.s2_train import main as s2_main
 
 from Model.tts_main import get_audio
 import soundfile as sf
@@ -210,10 +210,12 @@ def train():
     # SoVITS模型训练
     s2_main(character)
 
-    if os.path.exists(f"Model/trained/{character}/%s_e%s.ckpt" % (character, 12)):
+    if os.path.exists(f"Model/trained/{character}/ckpt/%s_e%s.ckpt" % (character, 12)):
         sovits_weights = glob.glob(f"Model/trained/{character}/*e12*.pth")
         if sovits_weights:
             return jsonify({"log": "训练完成"}), 200
+    else:
+        return jsonify({"log": "未找到模型路径"}), 500
 
 
 # 训练完成后，在GPT_weights、SoVITS_weights中提取模型，进行TTS
@@ -282,63 +284,62 @@ def PPTaudio():
     filename = file.filename
     file_extension = filename.rsplit('.', 1)[1].lower()
     detected_type = ALLOWED_MIME_TYPES.get(file_extension)
+
+    file.stream.seek(0)
     if detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        k = get_ppttext(file)
+        slide_texts = get_ppttext(file)
+    else:
+        return jsonify({"error": "文件类型不合法"}), 400
 
-    character = request.json.get("character")
+    character = request.form.get("character")
 
-    # get_processed_audio(data)
-    # data = {
-    #     "text" = ...,
-    #     "character" = character
-    # }
-
+    file.stream.seek(0)
     try:
         prs = Presentation(file)
     except Exception as e:
         return jsonify({"error": f"PPT文件读取失败: {str(e)}"}), 500
 
-    # for text in k:
+    # 遍历每一页，生成并插入音频
+    for idx, slide in enumerate(prs.slides):
+        if idx >= len(slide_texts):
+            break
+        text = "\n".join(slide_texts[idx]).strip()
+        if not text:
+            continue
 
-    slide_id = 0
-    for slide in prs.slides:
+        # 3) 收集 TTS 输出的所有块，拼成 bytes
         try:
-            slide_id += 1
+            chunks = list(get_processed_audio({"text": text, "character": character}))
+            audio_bytes = b"".join(chunks)
+        except Exception as e:
+            print(f"TTS 失败: {e}")
+            continue
 
-            audio = get_processed_audio(text)
+        # 4) 写临时 mp3 并插入
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
+            tmp.write(audio_bytes)
+            tmp.flush()
+            tmp_path = tmp.name
 
-            left = Inches(1)
-            top = Inches(1)
-            width = Inches(1)
-            height = Inches(1)
-
-            # 重置音频流指针
-            audio.seek(0)
-
-            # 使用 add_media 添加音频
+        try:
             audio_shape = slide.shapes.add_movie(
-                audio,
-                left, top, width, height,
+                tmp_path,
+                Inches(1), Inches(1),
+                Inches(1), Inches(1),
+                mime_type='audio/wav',
                 poster_frame_image=None
             )
-
             audio_shape.media_format.show_controls = False
-
         except Exception as e:
-            print(f"第 {slide_id} 页音频添加失败: {str(e)}")
-            continue  # 跳过当前页，继续处理
+            print(f"插入失败: {e}")
+        finally:
+            os.remove(tmp_path)
 
-    output_path = os.path.join("PPT", 'modified_' + filename)
-    try:
-        prs.save(output_path)
-    except Exception as e:
-        return jsonify({"error": f"PPT保存失败: {str(e)}"}), 500
-
-    return jsonify({
-        "log": "音频添加到PPT成功",
-        "output_path": output_path
-    }), 200
-
+    # 5) 保存并返回
+    os.makedirs('PPT', exist_ok=True)
+    out_path = os.path.join('PPT', 'modified_' + file.filename)
+    prs.save(out_path)
+    return jsonify({"output_path": out_path}), 200
 
 
 if __name__ == '__main__':

@@ -4,7 +4,6 @@ import requests
 import numpy as np
 from string import Template
 import wave, io
-import gradio as gr
 
 # 在开头加入路径
 import os, sys
@@ -57,7 +56,7 @@ default_data = {
         "top_k": 12,
         "top_p": 0.6,
         "temperature": 0.6,
-        "cut_method": "auto_cut",
+        "cut_method": "cut5",
         "max_cut_length": 100,
         "seed": -1,
         "stream": False,
