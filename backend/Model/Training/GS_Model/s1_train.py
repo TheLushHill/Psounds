@@ -32,7 +32,6 @@ def my_save(fea,path):
     name=os.path.basename(path)
     tmp_path="%s.pth"%(ttime())
     torch.save(fea,tmp_path)
-    shutil.move(tmp_path,"%s/%s"%(dir,name))
     
 # 重写pytorch的ModelCheckpoint类，实现保存最新的ckpt和自定义保存路径
 class my_model_ckpt(ModelCheckpoint):
@@ -169,6 +168,6 @@ def main(args,exp_name):
         ckpt_path = ckpt_dir / newest_ckpt_name
     except Exception:
         ckpt_path = None
-    print("ckpt_path:", ckpt_path)
     trainer.fit(model, data_module, ckpt_path=ckpt_path)
     
+   

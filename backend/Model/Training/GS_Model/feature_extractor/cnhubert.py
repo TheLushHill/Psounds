@@ -13,7 +13,7 @@ from transformers import (
     HubertModel,
 )
 
-import Training.GS_Model.utils
+import Model.Training.GS_Model.utils
 import torch.nn as nn
 
 cnhubert_base_path = None

@@ -1,4 +1,4 @@
-from Training.text.symbols import *
+from Model.Training.text.symbols import *
 
 
 _symbol_to_id = {s: i for i, s in enumerate(symbols)}

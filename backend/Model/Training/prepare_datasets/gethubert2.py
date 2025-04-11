@@ -1,10 +1,10 @@
 import sys, os
-from Training.GS_Model.feature_extractor import cnhubert
+from Model.Training.GS_Model.feature_extractor import cnhubert
 import pdb, traceback, numpy as np, logging
 from scipy.io import wavfile
 import librosa, torch
 sys.path.append(os.getcwd())
-from Training.my_utils import load_audio
+from Model.Training.my_utils import load_audio
 import shutil, subprocess  # 添加 subprocess 用于检查 ffmpeg 路径
 from time import time as ttime
 

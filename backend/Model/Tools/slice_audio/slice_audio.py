@@ -32,7 +32,7 @@ def slice_audio(inp, opt_root):
     _max = 0.9  # 音频最大幅度
     alpha = 0.25  # 音频幅度调整参数
     i_part = 0  # 当前分片索引（用于多线程或分片处理）
-    all_part = 10  # 总分片数（用于多线程或分片处理）
+    all_part = 1  # 总分片数（用于多线程或分片处理）
 
     output_files = []  # 用于存储生成的音频文件路径
     for inp_path in input_files[int(i_part)::int(all_part)]:

@@ -1,6 +1,6 @@
 train_semantic_path: "Model\\Training\\List_file\\list3\\6_name2semantic_0.tsv"
 train_phoneme_path: "Model\\Training\\List_file\\list1\\2_name2text_0.txt"
-pretrained_s1: Model/Training/pretrained_models/gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt
+pretrained_s1: Model\\Training\\pretrained_models\\gsv-v2final-pretrained\\s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt
 train:
   seed: 1234
   epochs: 12

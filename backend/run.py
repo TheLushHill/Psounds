@@ -1,6 +1,6 @@
 # 该文件夹中定义前端向后端发送文件/请求，后端判断是哪种文件类型并调用该文件的api
 
-from glob import glob
+import glob
 import logging, warnings, tempfile
 from modelscope.utils.logger import get_logger
 logging.basicConfig(level=logging.WARNING)
@@ -10,35 +10,14 @@ modelscope_logger.propagate = False
 
 from flask import Flask, request, jsonify, render_template, session, Response
 import os, sys, requests, json, io
-import shutil
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-import argparse
-from multiprocessing import freeze_support
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
 
-from GetWord.docx.DocxWord import get_docxtext
-from GetWord.pptx.PPTWord import get_ppttext
-from pptx import Presentation
-from pptx.util import Inches
 
-# from Model.Tools.uvr5.uvrmain import uvr
-# from Model.Tools.slice_audio.slice_audio import slice_audio
-# from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
-# from Model.Tools.asr.funasr_asr import execute_asr
-# import Model.Tools.subfix.subfix as subfix
+import argparse, shutil
+from multiprocessing import freeze_support
+from pathlib import Path
 
-# from Model.Training.prepare_datasets.gettext1 import slice2bert
-# from Model.Training.prepare_datasets.gethubert2 import get_hubert
-# from Model.Training.prepare_datasets.getsemanic3 import get_semanic
-
-# from pathlib import Path
-# sys.path.append(str(Path("Model/Training/Gs_Model")))
-# from Model.Training.GS_Model.s1_train import parse_args, main as s1_main
-# from Model.Training.GS_Model.s2_train import main as s2_main
-
-from Model.tts_main import get_audio
-import soundfile as sf
 
 app = Flask(__name__)
 
@@ -56,6 +35,9 @@ def allowed_file(filename):
 
 @app.route('/upload', methods=['POST'])                             # JS的AJAX请求，fetch("/upload", {...})
 def upload_file():
+    from GetWord.docx.DocxWord import get_docxtext
+    from GetWord.pptx.PPTWord import get_ppttext
+
     file = request.files['file']
     filename = file.filename
 
@@ -101,10 +83,9 @@ def upload_file():
 
 # 在这里判断文件类型，并调用各类型的api   后续在这里判断一下内存大小
     if detected_type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document':
-        return get_docxtext(file)
+        return jsonify(get_docxtext(file))
     elif detected_type == 'application/vnd.openxmlformats-officedocument.presentationml.presentation':
-        k = get_ppttext(file)
-        return jsonify(k)
+        return jsonify(get_ppttext(file))
 
 
 # 解析成功返回前端。前端发送一段文字后，在这里进行预处理
@@ -112,6 +93,7 @@ def upload_file():
 # 前端发送过来的人物音频，先保存到Model\\input_audio
 @app.route('/SaveAudio', methods=['POST'])
 def SaveAudio():
+
     ALLOWED_AUDIO_EXTENSIONS = {'wav', 'mp3', 'm4a'}
     def allowed_audio_file(filename):
         return '.' in filename and \
@@ -150,6 +132,11 @@ def get_filename():
 ##数据集的预处理
 @app.route('/preprocess', methods=['POST'])
 def preprocess():
+    from Model.Tools.uvr5.uvrmain import uvr
+    from Model.Tools.slice_audio.slice_audio import slice_audio
+    from Model.Tools.cmd_denoise.cmd_denoise import execute_denoise
+    from Model.Tools.asr.funasr_asr import execute_asr
+
     result1 = uvr("Model\\input_audio",
                  "Model\\Tools\\output_cache\\uvr5_opt\\vocal",
                  "Model\\Tools\\output_cache\\uvr5_opt\\instrumental"
@@ -179,6 +166,10 @@ def preprocess():
 # 格式化音频
 @app.route('/format', methods=['POST'])
 def format_audio():
+    from Model.Training.prepare_datasets.gettext1 import slice2bert
+    from Model.Training.prepare_datasets.gethubert2 import get_hubert
+    from Model.Training.prepare_datasets.getsemanic3 import get_semanic
+
     character = request.json.get("character")
     slice2bert("Model/Tools/output_cache/asr_opt/denoise_opt.list", character)
     get_hubert(character)
@@ -191,8 +182,10 @@ def format_audio():
 # 训练模型
 @app.route('/train', methods=['POST'])
 def train():
+    from Model.Training.GS_Model.s1_train import main as s1_main
+    from Model.Training.GS_Model.s2_train import main as s2_main
 
-    #调用 s1_train 的 main 函数
+    #调用 s1_train 的 main 函数的参数
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-c",
@@ -204,22 +197,46 @@ def train():
     args = parser.parse_args()
     character = request.json.get("character") 
 
-    # GPT模型训练
     s1_main(args, character)
-
-    # SoVITS模型训练
     s2_main(character)
 
-    if os.path.exists(f"Model/trained/{character}/ckpt/%s_e%s.ckpt" % (character, 12)):
-        sovits_weights = glob.glob(f"Model/trained/{character}/*e12*.pth")
-        if sovits_weights:
-            return jsonify({"log": "训练完成"}), 200
+    # 移动.ckpt与.pth文件至父级文件夹，并删除其他不要的文件夹
+    dest_dir = Path(f"Model/trained/{character}")
+    ckpt_dir = Path(f"Model/trained/{character}/ckpt")
+    eval_dir = Path(f"Model/trained/{character}/eval")
+
+    target_files = glob.glob(str(ckpt_dir / "*epoch=11*.ckpt"))
+    src_path = Path(target_files[0])  # 取首个匹配项
+    dest_path = dest_dir / src_path.name
+
+    shutil.move(str(src_path),str(dest_path))
+
+    shutil.rmtree(f"Model\\trained\\{character}\\{character}")
+    shutil.rmtree(ckpt_dir)
+    shutil.rmtree(eval_dir)
+
+    s1delete = glob.glob(str(dest_dir /"*e4*.pth"))
+    d1 = Path(s1delete[0])
+    s2delete = glob.glob(str(dest_dir /"*e8*.pth"))
+    d2 = Path(s2delete[0])
+    os.remove(d1)
+    os.remove(d2)
+    
+    for file_path in glob.glob("*17*.pth"):
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+            print(f"已删除pth缓存文件: {file_path}")
+
+    if os.path.exists(f"Model\\trained\\{character}"):
+        return jsonify({"log": "模型训练成功"}), 200
     else:
         return jsonify({"log": "未找到模型路径"}), 500
 
 
 # 训练完成后，在GPT_weights、SoVITS_weights中提取模型，进行TTS
 #tts 开始
+from Model.tts_main import get_audio
+import soundfile as sf
 def process_audio_sf(sr, audio_data):
     with io.BytesIO() as buffer:
         sf.write(buffer, audio_data, sr, format='WAV')
@@ -228,6 +245,7 @@ def process_audio_sf(sr, audio_data):
 # 获取处理后的音频数据
 def get_processed_audio(data, streaming=False):
     """获取处理后的音频数据"""
+    
     raw_audio = get_audio(data, streaming=streaming)
     
     if not streaming:
@@ -241,8 +259,10 @@ def get_processed_audio(data, streaming=False):
 # 返回整个 wav 文件
 @app.route("/tts", methods=["POST"])
 def handletts():
-    data = request.json;  
 
+    data = request.json;  
+    print("路徑：")
+    print(sys.path)
     data = {
         "text": data.get("text", "你好，世界"),
         "character": data.get("character", "Hutao"),
@@ -259,6 +279,7 @@ def handletts():
 # 流式返回
 @app.route("/tts_stream", methods=["POST"])
 def handletts_stream():
+
     data = request.json;
     
     data = {
@@ -280,6 +301,10 @@ def handletts_stream():
 #当用户提供的是PPT文件时，在每一页中添加音频
 @app.route('/PPTaudio', methods=['POST'])
 def PPTaudio():
+    from GetWord.pptx.PPTWord import get_ppttext
+    from pptx import Presentation
+    from pptx.util import Inches
+
     file = request.files['file']
     filename = file.filename
     file_extension = filename.rsplit('.', 1)[1].lower()
@@ -301,8 +326,6 @@ def PPTaudio():
 
     # 遍历每一页，生成并插入音频
     for idx, slide in enumerate(prs.slides):
-        if idx >= len(slide_texts):
-            break
         text = "\n".join(slide_texts[idx]).strip()
         if not text:
             continue

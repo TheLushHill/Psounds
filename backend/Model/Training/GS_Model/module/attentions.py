@@ -3,8 +3,8 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from Training.GS_Model.module import commons
-from Training.GS_Model.module.modules import LayerNorm
+from Model.Training.GS_Model.module import commons
+from Model.Training.GS_Model.module.modules import LayerNorm
 
 
 class Encoder(nn.Module):

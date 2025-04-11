@@ -8,8 +8,8 @@ from random import shuffle
 import torch.multiprocessing as mp
 from glob import glob
 from tqdm import tqdm
-import logging, librosa, Training.GS_Model.utils, torch
-from Training.GS_Model.module.models import SynthesizerTrn
+import logging, librosa, Model.Training.GS_Model.utils, torch
+from Model.Training.GS_Model.module.models import SynthesizerTrn
 
 logging.getLogger("numba").setLevel(logging.WARNING)
 
@@ -35,7 +35,7 @@ def get_semanic(exp_name):
         #     device = "mps"
         else:
             device = "cpu"
-        hps = Training.GS_Model.utils.get_hparams_from_file(s2config_path)
+        hps = Model.Training.GS_Model.utils.get_hparams_from_file(s2config_path)
         vq_model = SynthesizerTrn(
             hps.data.filter_length // 2 + 1,
             hps.train.segment_size // hps.data.hop_length,

@@ -11,3 +11,9 @@ cache/
 *.exe
 
 *.bin
+
+Model/GPT_SoVITS/pretrained_models/
+
+runtime/
+
+PPT/

@@ -13,7 +13,7 @@ import typing as tp
 import torch
 from torch import nn
 
-from Training.GS_Model.module.core_vq import ResidualVectorQuantization
+from Model.Training.GS_Model.module.core_vq import ResidualVectorQuantization
 
 
 @dataclass

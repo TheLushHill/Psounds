@@ -2,8 +2,8 @@
 # reference: https://github.com/lifeiteng/vall-e
 import os, sys
 
-now_dir = os.getcwd()
-sys.path.append(now_dir)
+# now_dir = os.getcwd()
+# sys.path.append(now_dir)
 from typing import Dict
 
 import torch

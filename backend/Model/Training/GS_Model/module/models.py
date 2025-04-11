@@ -10,10 +10,10 @@ from . import commons,modules,attentions
 
 from torch.nn import Conv1d, ConvTranspose1d, AvgPool1d, Conv2d
 from torch.nn.utils import weight_norm, remove_weight_norm, spectral_norm
-from Training.GS_Model.module.commons import init_weights, get_padding
-from Training.GS_Model.module.mrte_model import MRTE
-from Training.GS_Model.module.quantize import ResidualVectorQuantizer
-from Training.text import symbols
+from Model.Training.GS_Model.module.commons import init_weights, get_padding
+from Model.Training.GS_Model.module.mrte_model import MRTE
+from Model.Training.GS_Model.module.quantize import ResidualVectorQuantizer
+from Model.Training.text import symbols
 from torch.cuda.amp import autocast
 import contextlib
 

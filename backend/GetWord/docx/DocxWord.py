@@ -26,7 +26,7 @@ def get_docxtext(file):
         ]
 
         # 生成标准JSON格式
-        return jsonify(paragraphs)
+        return paragraphs
 
     except Exception as e:
         # 异常处理

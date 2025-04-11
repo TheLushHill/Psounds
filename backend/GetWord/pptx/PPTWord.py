@@ -41,7 +41,7 @@ def get_ppttext(file):
             if texts:
                 result.append(texts)
 
-        return jsonify(result)
+        return result
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500

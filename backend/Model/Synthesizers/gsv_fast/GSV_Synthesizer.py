@@ -59,7 +59,7 @@ class GSV_Synthesizer(Base_TTS_Synthesizer):
             print(f"GSV_Synthesizer config: {config_dict}")
 
         self.device, self.is_half = get_device_info(self.device, self.is_half)
-        tts_config = TTS_Config("")
+        tts_config = TTS_Config()
         tts_config.device , tts_config.is_half = self.device, self.is_half
         tts_config.cnhubert_base_path = self.cnhubert_base_path
         tts_config.bert_base_path = self.bert_base_path

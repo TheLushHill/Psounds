@@ -22,16 +22,17 @@ device=infer_device;
 def uvr(paths, save_root_vocal, save_root_ins):
     infos = []
     try:
+        file_list = []
         if os.path.isdir(paths):
-            for path in os.listdir(paths):
-                path = path;
+            for filename in os.listdir(paths):
+                file_list.append(os.path.join(paths, filename)) 
         elif os.path.isfile(paths):
-            path = paths;
+            file_list = [paths]
         else:
             raise ValueError(f"Invalid path: {paths}")
-        path = clean_path(os.path.join(paths, path));
-        save_root_vocal = clean_path(save_root_vocal)
-        save_root_ins = clean_path(save_root_ins)
+        # path = clean_path(os.path.join(paths, path));
+        # save_root_vocal = clean_path(save_root_vocal)
+        # save_root_ins = clean_path(save_root_ins)
         func = AudioPre
         pre_fun = func(
             agg=10,
@@ -40,45 +41,49 @@ def uvr(paths, save_root_vocal, save_root_ins):
             is_half=is_half,
         )
         
-        need_reformat = 1
-        done = 0
-        print(f"{os.getcwd()}\\Model\\ffprobe.exe")
-        try:
-            info = ffmpeg.probe(path, cmd=f"{os.getcwd()}\\Model\\ffprobe.exe")
-            if (
-                info["streams"][0]["channels"] == 2
-                and info["streams"][0]["sample_rate"] == "44100"
-            ):
-                need_reformat = 0
-                pre_fun._path_audio_(
-                    path, save_root_ins, save_root_vocal, format0,False
-                )
-                done = 1
-        except:
-            need_reformat = 1
-            traceback.print_exc()
-        if need_reformat == 1:
-            tmp_path = "%s/%s.reformatted.wav" % (
-                os.path.join(os.environ["TEMP"]),
-                os.path.basename(path),
-            )
-            os.system(
-                f'{os.getcwd()}\\Model\\ffmpeg.exe -i "{path}" -vn -acodec pcm_s16le -ac 2 -ar 44100 "{tmp_path}" -y'
-            )
-            path = tmp_path
-        try:
-            if done == 0:
-                pre_fun._path_audio_(
-                    path, save_root_ins, save_root_vocal, format0,False
-                )
-            infos.append("%s->Success" % (os.path.basename(path)))
-            return "Success"
-        except:
-            infos.append(
-                "%s->%s" % (os.path.basename(path), traceback.format_exc())
-            )
-    except:
-        infos.append(traceback.format_exc())
+        for path in file_list: 
+            try:
+                need_reformat = 1
+                done = 0
+                # 检查文件格式
+                try:
+                    info = ffmpeg.probe(path, cmd=f"{os.getcwd()}\\Model\\ffprobe.exe")
+                    if (
+                        info["streams"][0]["channels"] == 2
+                        and info["streams"][0]["sample_rate"] == "44100"
+                    ):
+                        need_reformat = 0
+                        pre_fun._path_audio_(
+                            path, save_root_ins, save_root_vocal, format0, False
+                        )
+                        done = 1
+                except Exception as e:
+                    infos.append(f"File {os.path.basename(path)} probe error: {str(e)}")
+                    continue
+
+                # 格式转换逻辑
+                if need_reformat == 1:
+                    tmp_path = os.path.join(
+                        os.environ["TEMP"],
+                        f"{os.path.basename(path)}.reformatted.wav"
+                    )
+                    os.system(
+                        f'"{os.getcwd()}\\Model\\ffmpeg.exe" -i "{path}" -vn -acodec pcm_s16le -ac 2 -ar 44100 "{tmp_path}" -y'
+                    )
+                    path = tmp_path
+
+                # 处理音频
+                if done == 0:
+                    pre_fun._path_audio_(
+                        path, save_root_ins, save_root_vocal, format0, False
+                    )
+                infos.append(f"{os.path.basename(path)} -> Success")
+
+            except Exception as e:
+                infos.append(f"{os.path.basename(path)} -> Error: {traceback.format_exc()}")
+                continue
+
+        return "\n".join(infos)
     finally:
         try:
             if model_name == "onnx_dereverb_By_FoxJoy":

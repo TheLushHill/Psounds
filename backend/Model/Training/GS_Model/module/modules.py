@@ -9,8 +9,8 @@ from torch.nn.utils import weight_norm, remove_weight_norm
 
 sys.path.append((os.path.join(os.path.dirname(__file__), "Training/Gs_Model/module")))
 from . import commons
-from Training.GS_Model.module.commons import init_weights, get_padding
-from Training.GS_Model.module.transforms import piecewise_rational_quadratic_transform
+from Model.Training.GS_Model.module.commons import init_weights, get_padding
+from Model.Training.GS_Model.module.transforms import piecewise_rational_quadratic_transform
 import torch.distributions as D
 
 
