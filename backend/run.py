@@ -12,12 +12,15 @@ from flask import Flask, request, jsonify, render_template, session, Response
 import os, sys, requests, json, io
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Model/Training/GS_Model"))
 
 
 import argparse, shutil
 from multiprocessing import freeze_support
 from pathlib import Path
 
+# from Model.tts_main import get_audio
+# import soundfile as sf
 
 app = Flask(__name__)
 
@@ -235,8 +238,8 @@ def train():
 
 # 训练完成后，在GPT_weights、SoVITS_weights中提取模型，进行TTS
 #tts 开始
-from Model.tts_main import get_audio
-import soundfile as sf
+# from Model.tts_main import get_audio
+# import soundfile as sf
 def process_audio_sf(sr, audio_data):
     with io.BytesIO() as buffer:
         sf.write(buffer, audio_data, sr, format='WAV')
