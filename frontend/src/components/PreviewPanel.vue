@@ -162,15 +162,18 @@
     align-items: flex-start;
 }
 
-.checkbox {
-    margin-top: 5px;
-    flex-shrink: 0;
-}
-
 .preview-docx .paragraph {
     display:block;
     padding: 0 16px;
     padding-left: 0px;
+    max-width: 80em;
+    margin-left: 1em;
+}
+
+.preview-docx .checkbox {
+    height: 1.5em;
+    width: 1.5em;
+    margin-top: 8px;
 }
 
 .preview-pptx {
@@ -180,7 +183,14 @@
     background-color: #fffefb;
 }
 
+.preview-pptx .checkbox {
+    width: 2em;
+    height: 2em;
+    margin-top: 2em;
+}
+
 .preview-pptx .page {
+    gap: 1em;
     display: flex;
     align-items: flex-start;
     flex-direction: row;

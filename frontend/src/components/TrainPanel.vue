@@ -188,10 +188,12 @@
                 <button @click="this.$refs.audioUpload.click()">上传本地音频</button>
             </div>
             <div class="record-bar">
-                <button @click="startRecord" :disabled="isRecording">录制声音</button>
-                <button @click="endRecord" :disabled="!isRecording">停止录音</button>
+                <div class="button-bar">
+                    <button @click="startRecord" :disabled="isRecording">录制声音</button>
+                    <button @click="endRecord" :disabled="!isRecording">停止录音</button>
+                    <button @click="uploadRecord">上传录音数据</button>
+                </div>
                 <audio ref="record" controls></audio>
-                <button @click="uploadRecord">上传录音数据</button>
             </div>
         </div>
         <div>
@@ -226,8 +228,16 @@ button:hover {
 }
 
 .record-bar {
+    width: 18em;
     display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 8px;
+}
 
+.record-bar .button-bar {
+    display: flex;
+    justify-content: space-around;
 }
 
 </style>

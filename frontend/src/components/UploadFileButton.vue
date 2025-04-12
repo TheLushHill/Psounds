@@ -31,6 +31,7 @@
                 }
                 else if (file.type === "application/vnd.openxmlformats-officedocument.presentationml.presentation") {
                     this.file.type = "pptx";
+                    this.file["file"] = new File([file], file.name, {type:"application/vnd.openxmlformats-officedocument.presentationml.presentation"})
                 }
                 this.file.url = URL.createObjectURL(file); 
 
