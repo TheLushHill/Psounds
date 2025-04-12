@@ -196,7 +196,7 @@ def get_hparams(init=True, stage=1):
         "-c",
         "--config",
         type=str,
-        default="./configs/s2.json",
+        default="Model/Training/GS_Model/configs/s2.json",
         help="JSON file for configuration",
     )
     parser.add_argument(

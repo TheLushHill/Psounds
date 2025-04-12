@@ -3,8 +3,8 @@
 import warnings # type: ignore
 warnings.filterwarnings("ignore")
 
-import utils, os
-hps = utils.get_hparams(stage=2)
+import Model.Training.GS_Model.utils, os
+hps = Model.Training.GS_Model.utils.get_hparams(stage=2)
 os.environ["CUDA_VISIBLE_DEVICES"] = hps.train.gpu_numbers.replace("-", ",")
 import torch
 from torch.nn import functional as F

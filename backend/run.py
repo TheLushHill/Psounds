@@ -12,7 +12,7 @@ from flask import Flask, request, jsonify, render_template, session, Response
 import os, sys, requests, json, io
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
-
+sys.path.append(os.path.join(os.path.dirname(__file__), "Model\\Training\\GS_Model"))
 
 import argparse, shutil
 from multiprocessing import freeze_support
@@ -101,20 +101,22 @@ def SaveAudio():
     
     save_dir = os.path.abspath("Model\\input_audio")
     audio_files = request.files.getlist('file')  # 获取多个文件
+    if not audio_files:
+        return jsonify({"error": "未选择文件"}), 400  # 拦截空列表
 
     for file in audio_files:
-        if file:
+        if file.filename.strip() != '':
             filename = file.filename
             file_path = os.path.join(save_dir, filename)
             if allowed_audio_file(file.filename):   
                 file.save(file_path)
                 print(f"音频文件 {filename} 保存成功")
+                return jsonify({"状态": "音频保存成功" , "文件夹路径": "Model\\input_audio"}), 200
             else:
                 return jsonify({"error": "音频文件类型不合法"}), 400
         else:
             return jsonify({"error": "没有找到文件或文件名空"}), 400
-           
-    return jsonify({"状态": "音频保存成功" , "文件夹路径": "Model\\input_audio"}), 200
+        
     
 # 解析成功,把前端刚刚上传的文件名依次返回前端
 @app.route('/getfilename', methods=['POST'])
@@ -261,8 +263,6 @@ def get_processed_audio(data, streaming=False):
 def handletts():
 
     data = request.json;  
-    print("路徑：")
-    print(sys.path)
     data = {
         "text": data.get("text", "你好，世界"),
         "character": data.get("character", "Hutao"),
@@ -304,6 +304,8 @@ def PPTaudio():
     from GetWord.pptx.PPTWord import get_ppttext
     from pptx import Presentation
     from pptx.util import Inches
+    from flask import send_file
+    from io import BytesIO
 
     file = request.files['file']
     filename = file.filename
@@ -330,7 +332,7 @@ def PPTaudio():
         if not text:
             continue
 
-        # 3) 收集 TTS 输出的所有块，拼成 bytes
+        # 收集 TTS 输出的所有块，拼成 bytes
         try:
             chunks = list(get_processed_audio({"text": text, "character": character}))
             audio_bytes = b"".join(chunks)
@@ -338,7 +340,7 @@ def PPTaudio():
             print(f"TTS 失败: {e}")
             continue
 
-        # 4) 写临时 mp3 并插入
+        # 写临时 mp3 并插入
         with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
             tmp.write(audio_bytes)
             tmp.flush()
@@ -358,11 +360,21 @@ def PPTaudio():
         finally:
             os.remove(tmp_path)
 
-    # 5) 保存并返回
-    os.makedirs('PPT', exist_ok=True)
-    out_path = os.path.join('PPT', 'modified_' + file.filename)
-    prs.save(out_path)
-    return jsonify({"output_path": out_path}), 200
+    # 保存并返回
+    output = BytesIO()
+    
+    try:
+        prs.save(output)  # 将修改后的PPT内容写入内存流
+        output.seek(0)    # 重置指针到开头
+        
+        return send_file(
+            output,
+            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            as_attachment=True,
+            download_name=f'modified_{filename}'
+        )
+    except Exception as e:
+        return jsonify({"error": f"保存PPT失败: {str(e)}"}), 500
 
 
 if __name__ == '__main__':
