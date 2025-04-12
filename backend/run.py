@@ -8,8 +8,9 @@ modelscope_logger = get_logger()
 modelscope_logger.setLevel(logging.ERROR)  # 设置为 ERROR 或更高
 modelscope_logger.propagate = False
 
-from flask import Flask, request, jsonify, render_template, session, Response
+from flask import Flask, request, jsonify, render_template, session, Response, send_file
 import os, sys, requests, json, io
+from io import BytesIO
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model/Training/GS_Model"))
@@ -238,8 +239,8 @@ def train():
 
 # 训练完成后，在GPT_weights、SoVITS_weights中提取模型，进行TTS
 #tts 开始
-# from Model.tts_main import get_audio
-# import soundfile as sf
+from Model.tts_main import get_audio
+import soundfile as sf
 def process_audio_sf(sr, audio_data):
     with io.BytesIO() as buffer:
         sf.write(buffer, audio_data, sr, format='WAV')
@@ -362,10 +363,18 @@ def PPTaudio():
             os.remove(tmp_path)
 
     # 5) 保存并返回
-    os.makedirs('PPT', exist_ok=True)
-    out_path = os.path.join('PPT', 'modified_' + file.filename)
-    prs.save(out_path)
-    return jsonify({"output_path": out_path}), 200
+    # 改写成返回文件
+    buf = BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    )
+
 
 
 if __name__ == '__main__':
