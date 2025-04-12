@@ -14,6 +14,9 @@
                 playTime: null,
 
                 buffer: [],
+
+                // 课件的blobUrl
+                pptxblob: null
             }
         },
 
@@ -23,16 +26,14 @@
                     return this.text.join();
                 }
                 else if (this.type === "pptx") {
-                    let t;
-                    for (items in this.text) {
-                        for (item in items) {
-                            t = item.join();
-                        }
+                    let t = "";
+                    for (let items of this.text) {
+                        t += items.join()
                     }
                     return t;
                 }
-                
-            }
+            },
+
         },
 
         methods: {
@@ -204,6 +205,7 @@
                 }
             },
 
+            // 触发暂停/播放
             async togglePlayPause() {
                 if (this.audioCtx === null) {
                     alert("请先获取音频");
@@ -218,23 +220,54 @@
                 }
             },
 
+            // 停止流式音频播放
             stopStreamPlaying() {
                 this.togglePlayPause();
+            },
+
+            // 制作有声课件
+            async makePptx() {
+                if (!this.file) {
+                    alert("请先上传文件")
+                    return
+                }
+                else if (this.file.type != "pptx") {
+                    alert("当前选择的文件不是pptx,请切换到pptx文件")
+                    return 
+                }
+                else {
+                    let formData = new FormData()
+                    formData.append("file", this.file.file)
+                    formData.append("character", this.character)
+
+                    let response = await axios.post("/api/PPTaudio", formData, {
+                        responseType: "blob"
+                    })
+
+                    this.pptxblob = response.data
+                }
+            },
+            
+            // 下载课件
+            downloadPptx() {
+                const url = URL.createObjectURL(this.pptxblob);
+                const a = document.createElement("a")
+                a.href = url
+                a.download = 'modified_' + this.file.name
+                a.click()
             }
         },
         props: {
             isVisible: Boolean,
             text: {
                 type: Array,
-                default: () => [],
             },
             type: String,
             character: String,
             characterList: Array,
+            file: Object,
         },
 
-        watch: {
-        }
     }
 </script>
 
@@ -248,12 +281,7 @@
         </div>
         <div class="panel">
             <div class="full-audio-bar">
-                <button @click="getFullAudio" class="get-full-audio">获取完整音频</button>
-                <button @click="getStreamAudio" class="get-stream-audio">获取流式音频</button>
-                <audio ref="audio" controls></audio>
-            </div>
-            <div class="character-bar">
-                <div class="item">
+                <div class="select">
                     <span>当前角色模型：</span>
                     <select @change="updateCharacter">
                         <template v-for="(item, index) in characterList">
@@ -261,12 +289,21 @@
                         </template>
                     </select>
                 </div>
-                <button v-if="this.isPlaying" class="item" @click="stopStreamPlaying">暂停流式音频</button>
-                <button v-else class="item" @click="togglePlayPause">播放流式音频</button>
+                <button @click="getFullAudio" class="get-full-audio">获取完整音频</button>
+                <audio ref="audio" controls></audio>
+            </div>
+            <div class="stream">
+                <button @click="getStreamAudio" class="item">获取流式音频</button>
+                <button :disabled="isPlaying" class="item" @click="togglePlayPause">播放流式音频</button>
+                <button :disabled="!isPlaying" class="item" @click="stopStreamPlaying">暂停流式音频</button>
+            </div>
+            <div class="bar">
                 <button class="item" @click="handleDownload">
                     <a :href="blobUrl" download="audio.wav" ref="url"></a>
                     下载完整音频
                 </button>
+                <button @click="makePptx">制作有声课件</button>
+                <button @click="downloadPptx" :disabled="!pptxblob">下载课件</button>
             </div>
         </div>
     </div>
@@ -308,29 +345,12 @@
     flex-direction: column;
     padding: 8px;
     gap: 16px;
-    justify-content: center;
+    align-self: auto;
+    justify-content: space-around;
+    width: 15em;
 }
 
-.full-audio-bar button {
-    height: 3em;
-    border-radius: 12px;
-    background-color: #DCDAF5;
-    border: none;
-}
-
-.full-audio-bar button:hover {
-    background-color: #D1CEE9;
-}
-
-.character-bar {
-    display: flex;
-    flex-direction: column;
-    padding: 8px;
-    align-items: justify-content;
-    gap: 8px;
-}
-
-.character-bar .item {
+.select {
     border-radius: 12px;
     background-color: #DCDAF5;
     border: none;
@@ -341,30 +361,73 @@
     flex-grow: 1;
 }
 
-.character-bar span {
-    font-size: 16px; /* 调整字体大小 */
-    font-weight: bold; /* 加粗文字 */
-    color: #333; /* 深色文字 */
+.full-audio-bar button {
+    height: 3em;
+    
+    border-radius: 12px;
+    background-color: #DCDAF5;
+    border: none;
+    margin: 0px;
 }
 
-.character-bar select {
-    padding: 4px 8px; /* 增加内边距 */
-    font-size: 14px; /* 调整字体大小 */
-    border: 1px solid #CCC; /* 添加边框 */
-    border-radius: 4px; /* 圆角边框 */
-    background-color: #FFF; /* 白色背景 */
-    color: #333; /* 深色文字 */
-    transition: border-color 0.3s ease; /* 添加交互动画 */
+.full-audio-bar button:hover {
+    background-color: #D1CEE9;
 }
 
-.character-bar select:hover {
-    border-color: #888; /* 鼠标悬停时改变边框颜色 */
+.full-audio-bar audio {
+    width: 100%;
 }
 
-.character-bar select:focus {
-    outline: none; /* 移除默认的聚焦样式 */
-    border-color: #5B9BD5; /* 聚焦时的边框颜色 */
-    box-shadow: 0 0 4px rgba(91, 155, 213, 0.5); /* 聚焦时的阴影效果 */
+.stream {
+    width: 12em;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+
+.bar {
+    display: flex;
+    flex-direction: column;
+    padding: 8px;
+    gap: 8px;
+    width: 12em;
+}
+
+.bar .item {
+    border-radius: 12px;
+    background-color: #DCDAF5;
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0 8px;
+    flex-grow: 1;
+}
+
+span {
+    font-size: 16px; 
+    font-weight: bold; 
+    color: #333; 
+}
+
+select {
+    padding: 4px 8px; 
+    font-size: 14px; 
+    border: 1px solid #CCC; 
+    border-radius: 4px; 
+    background-color: #FFF; 
+    color: #333; 
+    transition: border-color 0.3s ease; 
+}
+
+select:hover {
+    border-color: #888; 
+}
+
+select:focus {
+    outline: none; 
+    border-color: #5B9BD5; 
+    box-shadow: 0 0 4px rgba(91, 155, 213, 0.5); 
 }
 
 .character-bar button:hover {

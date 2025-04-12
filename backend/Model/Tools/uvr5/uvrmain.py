@@ -2,6 +2,7 @@ import os, sys;
 sys.path.append(os.path.dirname(__file__));
 import traceback
 import logging
+import subprocess
 from Model.Tools.my_utils import clean_path
 
 logger = logging.getLogger(__name__)
@@ -67,9 +68,20 @@ def uvr(paths, save_root_vocal, save_root_ins):
                         os.environ["TEMP"],
                         f"{os.path.basename(path)}.reformatted.wav"
                     )
-                    os.system(
-                        f'"{os.getcwd()}\\Model\\ffmpeg.exe" -i "{path}" -vn -acodec pcm_s16le -ac 2 -ar 44100 "{tmp_path}" -y'
-                    )
+
+                    subprocess.run([
+                        f"{os.getcwd()}\\Model\\ffmpeg.exe",
+                        "-i", path,
+                        "-vn",
+                        "-acodec", "pcm_s16le",
+                        "-ac", "2",
+                        "-ar", "44100",
+                        tmp_path,
+                        "-y"
+                        ], check=True)
+                    # os.system(
+                    #     f'"{os.getcwd()}\\Model\\ffmpeg.exe" -i "{path}" -vn -acodec pcm_s16le -ac 2 -ar 44100 "{tmp_path}" -y'
+                    # )
                     path = tmp_path
 
                 # 处理音频

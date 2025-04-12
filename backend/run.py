@@ -8,16 +8,20 @@ modelscope_logger = get_logger()
 modelscope_logger.setLevel(logging.ERROR)  # 设置为 ERROR 或更高
 modelscope_logger.propagate = False
 
-from flask import Flask, request, jsonify, render_template, session, Response
+from flask import Flask, request, jsonify, render_template, session, Response, send_file
 import os, sys, requests, json, io
+from io import BytesIO
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Model"))
-sys.path.append(os.path.join(os.path.dirname(__file__), "Model\\Training\\GS_Model"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Model/Training/GS_Model"))
+
 
 import argparse, shutil
 from multiprocessing import freeze_support
 from pathlib import Path
 
+# from Model.tts_main import get_audio
+# import soundfile as sf
 
 app = Flask(__name__)
 
@@ -360,21 +364,19 @@ def PPTaudio():
         finally:
             os.remove(tmp_path)
 
-    # 保存并返回
-    output = BytesIO()
-    
-    try:
-        prs.save(output)  # 将修改后的PPT内容写入内存流
-        output.seek(0)    # 重置指针到开头
-        
-        return send_file(
-            output,
-            mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            as_attachment=True,
-            download_name=f'modified_{filename}'
-        )
-    except Exception as e:
-        return jsonify({"error": f"保存PPT失败: {str(e)}"}), 500
+    # 5) 保存并返回
+    # 改写成返回文件
+    buf = BytesIO()
+    prs.save(buf)
+    buf.seek(0)
+
+    return send_file(
+        buf,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.presentationml.presentation'
+    )
+
 
 
 if __name__ == '__main__':

@@ -403,6 +403,7 @@
                 :isVisible="state.convertPanel"
                 :type="getType"
                 :text="convertText" 
+                :file="fileList[0]"
                 :character="character"
                 :characterList="CharacterList"
                 @update-character="updateCharacter"
